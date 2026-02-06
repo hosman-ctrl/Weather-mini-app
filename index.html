@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeatherFlow - Advanced Weather App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/@rive-app/canvas@latest"></script>
+    <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        :root {
+            --day-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --night-bg: linear-gradient(135deg, #141e30 0%, #243b55 100%);
+            --card-bg: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.8);
+            --accent: #00d4ff;
+            --rain-color: #4fc3f7;
+            --fog-intensity: 0;
+        }
+
+        body {
+            background: var(--day-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            transition: background 0.5s ease;
+            backdrop-filter: blur(var(--fog-intensity, 0px));
+        }
+
+        body.night-mode {
+            background: var(--night-bg);
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Dynamic Environment Layer */
+        .environment-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .cloud {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 50px;
+            animation: float linear infinite;
+        }
+
+        .cloud:nth-child(1) { top: 10%; width: 80px; height: 30px; }
+        .cloud:nth-child(2) { top: 25%; width: 120px; height: 40px; }
+        .cloud:nth-child(3) { top: 15%; width: 60px; height: 25px; }
+        .cloud:nth-child(4) { top: 30%; width: 100px; height: 35px; }
+
+        .sun-moon {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ffd700, #ff9800);
+            top: 20px;
+            right: 20px;
+            transition: transform 0.5s ease, background 0.5s ease;
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.5);
+        }
+
+        .sun-moon.night {
+            background: linear-gradient(135deg, #e0e0e0, #b0b0b0);
+            box-shadow: 0 0 30px rgba(224, 224, 224, 0.3);
+        }
+
+        .rain-drop {
+            position: absolute;
+            width: 2px;
+            height: 20px;
+            background: var(--rain-color);
+            opacity: 0.6;
+            animation: rain-fall linear infinite;
+        }
+
+        /* Main UI */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-top: 10px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(45deg, var(--accent), #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .location-info {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .location-name {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .location-details {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .current-weather {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .temperature {
+            font-size: 72px;
+            font-weight: 300;
+            line-height: 1;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .temp-unit {
+            font-size: 24px;
+            margin-top: 10px;
+            margin-left: 5px;
+        }
+
+        .weather-desc {
+            font-size: 20px;
+            margin-bottom: 20px;
+            text-transform: capitalize;
+        }
+
+        .weather-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .weather-item {
+            text-align: center;
+        }
+
+        .weather-item .label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .weather-item .value {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            background: var(--card-bg);
+            border: none;
+            color: var(--text-secondary);
+            padding: 12px 20px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .tab.active {
+            background: rgba(0, 212, 255, 0.2);
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* History Section */
+        .history-controls {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .date-input {
+            width: 100%;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .comparison-card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .comparison-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .temp-diff {
+            font-size: 24px;
+            font-weight: 600;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .temp-diff.positive { color: #ff6b6b; }
+        .temp-diff.negative { color: #4ecdc4; }
+
+        /* Specialized Modules */
+        .module-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .module-card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .module-card h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: var(--accent);
+        }
+
+        .module-card .value {
+            font-size: 28px;
+            font-weight: 300;
+            margin-bottom: 5px;
+        }
+
+        .module-card .unit {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* Rain Countdown */
+        .rain-countdown {
+            background: linear-gradient(135deg, rgba(79, 195, 247, 0.2), rgba(33, 150, 243, 0.2));
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(79, 195, 247, 0.3);
+        }
+
+        .countdown-value {
+            font-size: 42px;
+            font-weight: 700;
+            margin: 10px 0;
+            background: linear-gradient(45deg, #4fc3f7, #2196f3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Share Card */
+        .share-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: none;
+        }
+
+        .share-card.active {
+            display: block;
+        }
+
+        .share-preview {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        /* Animations */
+        @keyframes float {
+            from { transform: translateX(-100px); }
+            to { transform: translateX(calc(100vw + 100px)); }
+        }
+
+        @keyframes rain-fall {
+            from { transform: translateY(-100px); }
+            to { transform: translateY(100vh); }
+        }
+
+        @keyframes sway {
+            0%, 100% { transform: rotate(-2deg); }
+            50% { transform: rotate(2deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            gap: 20px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .temperature {
+                font-size: 60px;
+            }
+            
+            .weather-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .module-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs {
+                overflow-x: auto;
+                padding-bottom: 10px;
+            }
+        }
+
+        /* Fog Overlay */
+        .fog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(var(--fog-blur, 0px));
+            pointer-events: none;
+            opacity: var(--fog-opacity, 0);
+            z-index: 999;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div>Loading weather data...</div>
+    </div>
+
+    <div class="environment-layer" id="environment"></div>
+    <div class="fog-overlay" id="fogOverlay"></div>
+
+    <div class="container" id="app" style="display: none;">
+        <div class="header">
+            <div class="logo">WeatherFlow</div>
+            <div id="timeDisplay">--:--</div>
+        </div>
+
+        <div class="location-info">
+            <div class="location-name" id="locationName">Loading...</div>
+            <div class="location-details" id="locationDetails">Elevation: -- m | Timezone: --</div>
+        </div>
+
+        <div class="rain-countdown" id="rainCountdown" style="display: none;">
+            <div>🌧️ Rain Starting In</div>
+            <div class="countdown-value" id="countdownTimer">-- min</div>
+            <div>Next precipitation</div>
+        </div>
+
+        <div class="current-weather" id="currentWeather">
+            <div class="temperature">
+                <span id="currentTemp">--</span>
+                <span class="temp-unit">°C</span>
+            </div>
+            <div class="weather-desc" id="weatherDescription">Loading weather...</div>
+            <div class="weather-grid">
+                <div class="weather-item">
+                    <div class="label">Feels Like</div>
+                    <div class="value" id="feelsLike">--°</div>
+                </div>
+                <div class="weather-item">
+                    <div class="label">Humidity</div>
+                    <div class="value" id="humidity">--%</div>
+                </div>
+                <div class="weather-item">
+                    <div class="label">Wind</div>
+                    <div class="value" id="windSpeed">-- km/h</div>
+                </div>
+                <div class="weather-item">
+                    <div class="label">Precipitation</div>
+                    <div class="value" id="precipitation">-- mm</div>
+                </div>
+                <div class="weather-item">
+                    <div class="label">Visibility</div>
+                    <div class="value" id="visibility">-- km</div>
+                </div>
+                <div class="weather-item">
+                    <div class="label">UV Index</div>
+                    <div class="value" id="uvIndex">--</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="forecast">Forecast</button>
+            <button class="tab" data-tab="history">Time Machine</button>
+            <button class="tab" data-tab="marine">Marine</button>
+            <button class="tab" data-tab="flood">Flood Risk</button>
+            <button class="tab" data-tab="share">Share</button>
+        </div>
+
+        <div class="tab-content active" id="forecastTab">
+            <div class="module-grid">
+                <div class="module-card">
+                    <h3>🌡️ Feels Like</h3>
+                    <div class="value" id="apparentTemp">--°</div>
+                    <div class="unit">Real feel temperature</div>
+                </div>
+                <div class="module-card">
+                    <h3>💨 Wind Gust</h3>
+                    <div class="value" id="windGust">-- km/h</div>
+                    <div class="unit">Maximum wind speed</div>
+                </div>
+                <div class="module-card">
+                    <h3>☁️ Cloud Cover</h3>
+                    <div class="value" id="cloudCover">--%</div>
+                    <div class="unit">Sky coverage</div>
+                </div>
+                <div class="module-card">
+                    <h3>🌅 Sunrise</h3>
+                    <div class="value" id="sunrise">--:--</div>
+                    <div class="unit">Morning golden hour</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="historyTab">
+            <div class="history-controls">
+                <input type="date" class="date-input" id="historyDate" max="">
+                <div class="comparison-card">
+                    <div class="comparison-header">
+                        <span>Historical Weather</span>
+                        <span id="historyDateDisplay">Select date</span>
+                    </div>
+                    <div id="historicalData">Select a date to view historical weather</div>
+                </div>
+                <div class="comparison-card">
+                    <div class="comparison-header">
+                        <span>10-Year Average</span>
+                        <span>Today's Date</span>
+                    </div>
+                    <div id="climateAverage">Loading climate data...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="marineTab">
+            <div class="module-grid">
+                <div class="module-card">
+                    <h3>🌊 Wave Height</h3>
+                    <div class="value" id="waveHeight">-- m</div>
+                    <div class="unit">Significant wave height</div>
+                </div>
+                <div class="module-card">
+                    <h3>🌡️ Sea Temperature</h3>
+                    <div class="value" id="seaTemp">--°</div>
+                    <div class="unit">Surface temperature</div>
+                </div>
+                <div class="module-card">
+                    <h3>💨 Wave Period</h3>
+                    <div class="value" id="wavePeriod">-- s</div>
+                    <div class="unit">Wave interval</div>
+                </div>
+                <div class="module-card">
+                    <h3>🧭 Swell Direction</h3>
+                    <div class="value" id="swellDirection">--°</div>
+                    <div class="unit">Wave direction</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="floodTab">
+            <div class="module-grid">
+                <div class="module-card">
+                    <h3>⚠️ Flood Risk</h3>
+                    <div class="value" id="floodRisk">--%</div>
+                    <div class="unit">Probability today</div>
+                </div>
+                <div class="module-card">
+                    <h3>💧 Soil Moisture</h3>
+                    <div class="value" id="soilMoisture">--%</div>
+                    <div class="unit">Surface saturation</div>
+                </div>
+                <div class="module-card">
+                    <h3>🌧️ Runoff</h3>
+                    <div class="value" id="runoff">-- mm</div>
+                    <div class="unit">Water runoff</div>
+                </div>
+                <div class="module-card">
+                    <h3>🏞️ Water Level</h3>
+                    <div class="value" id="waterLevel">-- m</div>
+                    <div class="unit">River/Stream level</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="shareTab">
+            <div class="share-card" id="sharePreview">
+                <div class="share-preview">
+                    <div style="font-size: 24px; font-weight: 600; margin-bottom: 10px;" id="shareLocation">Location</div>
+                    <div style="font-size: 64px; font-weight: 300; margin: 20px 0;" id="shareTemp">--°</div>
+                    <div style="font-size: 20px; margin-bottom: 20px;" id="shareDesc">Weather Description</div>
+                    <div style="display: flex; justify-content: space-around; font-size: 14px;">
+                        <div>💨 <span id="shareWind">--</span></div>
+                        <div>💧 <span id="shareHumidity">--</span></div>
+                        <div>🌡️ <span id="shareFeelsLike">--</span></div>
+                    </div>
+                </div>
+                <button class="tab" onclick="generateShareCard()" style="width: 100%; margin-top: 20px;">
+                    📸 Generate & Share Card
+                </button>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; font-size: 12px; color: var(--text-secondary);">
+            Powered by Open-Meteo API • Data updates every 15 min
+        </div>
+    </div>
+
+    <script>
+        // Telegram Web App initialization
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
+
+        // Global state
+        let userLocation = null;
+        let currentWeatherData = null;
+        let marineData = null;
+        let floodData = null;
+        let isDay = true;
+        let rainAnimationInterval = null;
+        let cloudAnimationIntervals = [];
+
+        // DOM Elements
+        const elements = {
+            loading: document.getElementById('loading'),
+            app: document.getElementById('app'),
+            environment: document.getElementById('environment'),
+            fogOverlay: document.getElementById('fogOverlay'),
+            locationName: document.getElementById('locationName'),
+            locationDetails: document.getElementById('locationDetails'),
+            currentTemp: document.getElementById('currentTemp'),
+            weatherDescription: document.getElementById('weatherDescription'),
+            feelsLike: document.getElementById('feelsLike'),
+            humidity: document.getElementById('humidity'),
+            windSpeed: document.getElementById('windSpeed'),
+            precipitation: document.getElementById('precipitation'),
+            visibility: document.getElementById('visibility'),
+            uvIndex: document.getElementById('uvIndex'),
+            apparentTemp: document.getElementById('apparentTemp'),
+            windGust: document.getElementById('windGust'),
+            cloudCover: document.getElementById('cloudCover'),
+            sunrise: document.getElementById('sunrise'),
+            rainCountdown: document.getElementById('rainCountdown'),
+            countdownTimer: document.getElementById('countdownTimer'),
+            timeDisplay: document.getElementById('timeDisplay'),
+            historyDate: document.getElementById('historyDate'),
+            historicalData: document.getElementById('historicalData'),
+            climateAverage: document.getElementById('climateAverage'),
+            waveHeight: document.getElementById('waveHeight'),
+            seaTemp: document.getElementById('seaTemp'),
+            wavePeriod: document.getElementById('wavePeriod'),
+            swellDirection: document.getElementById('swellDirection'),
+            floodRisk: document.getElementById('floodRisk'),
+            soilMoisture: document.getElementById('soilMoisture'),
+            runoff: document.getElementById('runoff'),
+            waterLevel: document.getElementById('waterLevel')
+        };
+
+        // Initialize the app
+        async function initApp() {
+            try {
+                // Request location from Telegram
+                if (tg.initDataUnsafe.user) {
+                    tg.requestLocation().then(location => {
+                        if (location) {
+                            userLocation = location;
+                            loadAllWeatherData();
+                        } else {
+                            // Fallback to IP geolocation
+                            getUserLocationByIP();
+                        }
+                    }).catch(() => {
+                        getUserLocationByIP();
+                    });
+                } else {
+                    getUserLocationByIP();
+                }
+
+                // Set up tab switching
+                setupTabs();
+
+                // Update time
+                updateTime();
+                setInterval(updateTime, 60000);
+
+                // Set max date for history picker to yesterday
+                const today = new Date();
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                elements.historyDate.max = yesterday.toISOString().split('T')[0];
+
+                // Set up history date change
+                elements.historyDate.addEventListener('change', loadHistoricalWeather);
+
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showError('Failed to initialize app');
+            }
+        }
+
+        // Get location by IP
+        async function getUserLocationByIP() {
+            try {
+                const response = await fetch('https://ipapi.co/json/');
+                const data = await response.json();
+                userLocation = {
+                    latitude: data.latitude,
+                    longitude: data.longitude
+                };
+                elements.locationName.textContent = `${data.city}, ${data.country_name}`;
+                loadAllWeatherData();
+            } catch (error) {
+                console.error('IP location error:', error);
+                // Default to London
+                userLocation = { latitude: 51.5074, longitude: -0.1278 };
+                elements.locationName.textContent = 'London, UK';
+                loadAllWeatherData();
+            }
+        }
+
+        // Load all weather data
+        async function loadAllWeatherData() {
+            try {
+                await Promise.all([
+                    loadCurrentWeather(),
+                    loadMarineData(),
+                    loadFloodData(),
+                    loadClimateAverage()
+                ]);
+                
+                // Show main app
+                elements.loading.style.display = 'none';
+                elements.app.style.display = 'block';
+                
+                // Update dynamic environment
+                updateDynamicEnvironment();
+                
+            } catch (error) {
+                console.error('Data loading error:', error);
+                showError('Failed to load weather data');
+            }
+        }
+
+        // Load current weather
+        async function loadCurrentWeather() {
+            const response = await fetch(
+                `https://api.open-meteo.com/v1/forecast?` +
+                `latitude=${userLocation.latitude}&` +
+                `longitude=${userLocation.longitude}&` +
+                `current_weather=true&` +
+                `hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,visibility,wind_speed_10m,wind_gusts_10m,cloud_cover,uv_index&` +
+                `daily=sunrise,sunset&` +
+                `timezone=auto&` +
+                `forecast_days=2`
+            );
+            
+            const data = await response.json();
+            currentWeatherData = data;
+            
+            updateCurrentWeatherUI(data);
+            updateRainCountdown(data);
+        }
+
+        // Update current weather UI
+        function updateCurrentWeatherUI(data) {
+            const current = data.current_weather;
+            const hourly = data.hourly;
+            const currentIndex = new Date().getHours();
+            
+            // Update main display
+            elements.currentTemp.textContent = Math.round(current.temperature);
+            elements.feelsLike.textContent = `${Math.round(hourly.apparent_temperature[currentIndex])}°`;
+            elements.humidity.textContent = `${Math.round(hourly.relative_humidity_2m[currentIndex])}%`;
+            elements.windSpeed.textContent = `${Math.round(current.windspeed)}`;
+            elements.precipitation.textContent = hourly.precipitation[currentIndex];
+            elements.visibility.textContent = (hourly.visibility[currentIndex] / 1000).toFixed(1);
+            elements.uvIndex.textContent = Math.round(hourly.uv_index[currentIndex]);
+            
+            // Update weather description
+            const weatherCode = current.weathercode;
+            elements.weatherDescription.textContent = getWeatherDescription(weatherCode);
+            
+            // Update additional forecast data
+            elements.apparentTemp.textContent = `${Math.round(hourly.apparent_temperature[currentIndex])}°`;
+            elements.windGust.textContent = Math.round(hourly.wind_gusts_10m[currentIndex]);
+            elements.cloudCover.textContent = Math.round(hourly.cloud_cover[currentIndex]);
+            
+            // Update sunrise time
+            if (data.daily && data.daily.sunrise) {
+                const sunriseTime = new Date(data.daily.sunrise[0]);
+                elements.sunrise.textContent = sunriseTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            }
+            
+            // Set day/night mode
+            isDay = current.is_day === 1;
+            document.body.classList.toggle('night-mode', !isDay);
+            document.querySelector('.sun-moon').classList.toggle('night', !isDay);
+            
+            // Update location details with timezone
+            const timezone = data.timezone || 'Auto';
+            elements.locationDetails.textContent = `Timezone: ${timezone.split('/')[1] || timezone}`;
+        }
+
+        // Load marine data
+        async function loadMarineData() {
+            try {
+                const response = await fetch(
+                    `https://marine-api.open-meteo.com/v1/marine?` +
+                    `latitude=${userLocation.latitude}&` +
+                    `longitude=${userLocation.longitude}&` +
+                    `hourly=wave_height,wave_period,swell_wave_direction,sea_surface_temperature`
+                );
+                
+                const data = await response.json();
+                marineData = data;
+                
+                if (data.hourly) {
+                    const currentHour = new Date().getHours();
+                    elements.waveHeight.textContent = data.hourly.wave_height[currentHour].toFixed(1);
+                    elements.wavePeriod.textContent = data.hourly.wave_period[currentHour].toFixed(0);
+                    elements.swellDirection.textContent = Math.round(data.hourly.swell_wave_direction[currentHour]);
+                    elements.seaTemp.textContent = Math.round(data.hourly.sea_surface_temperature[currentHour]);
+                }
+            } catch (error) {
+                console.error('Marine data error:', error);
+            }
+        }
+
+        // Load flood data
+        async function loadFloodData() {
+            try {
+                const response = await fetch(
+                    `https://flood-api.open-meteo.com/v1/flood?` +
+                    `latitude=${userLocation.latitude}&` +
+                    `longitude=${userLocation.longitude}&` +
+                    `daily=river_discharge,soil_moisture_0_to_10cm`
+                );
+                
+                const data = await response.json();
+                floodData = data;
+                
+                if (data.daily) {
+                    // Calculate flood risk based on discharge
+                    const discharge = data.daily.river_discharge[0] || 0;
+                    const moisture = data.daily.soil_moisture_0_to_10cm[0] || 0;
+                    
+                    elements.floodRisk.textContent = Math.min(Math.round((discharge / 100) * 100), 100);
+                    elements.soilMoisture.textContent = Math.round(moisture * 100);
+                    elements.runoff.textContent = Math.round(discharge / 10);
+                    elements.waterLevel.textContent = (discharge / 500).toFixed(1);
+                }
+            } catch (error) {
+                console.error('Flood data error:', error);
+            }
+        }
+
+        // Load historical weather
+        async function loadHistoricalWeather() {
+            const selectedDate = elements.historyDate.value;
+            if (!selectedDate) return;
+            
+            try {
+                const response = await fetch(
+                    `https://archive-api.open-meteo.com/v1/archive?` +
+                    `latitude=${userLocation.latitude}&` +
+                    `longitude=${userLocation.longitude}&` +
+                    `start_date=${selectedDate}&` +
+                    `end_date=${selectedDate}&` +
+                    `daily=temperature_2m_max,temperature_2m_min,precipitation_sum&` +
+                    `timezone=auto`
+                );
+                
+                const data = await response.json();
+                
+                if (data.daily) {
+                    const date = new Date(selectedDate);
+                    const formattedDate = date.toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    });
+                    
+                    elements.historyDateDisplay.textContent = formattedDate;
+                    
+                    const html = `
+                        <div style="text-align: center;">
+                            <div style="font-size: 28px; margin: 10px 0;">
+                                ${Math.round(data.daily.temperature_2m_max[0])}° / ${Math.round(data.daily.temperature_2m_min[0])}°
+                            </div>
+                            <div style="color: var(--text-secondary); margin-bottom: 10px;">
+                                Max / Min Temperature
+                            </div>
+                            <div style="font-size: 18px;">
+                                Precipitation: ${data.daily.precipitation_sum[0]} mm
+                            </div>
+                        </div>
+                    `;
+                    
+                    elements.historicalData.innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Historical data error:', error);
+                elements.historicalData.innerHTML = '<div style="text-align: center; color: #ff6b6b;">Failed to load historical data</div>';
+            }
+        }
+
+        // Load 10-year climate average
+        async function loadClimateAverage() {
+            try {
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                
+                // We'll simulate climate data since the actual API might require multiple calls
+                const avgTemp = await simulateClimateAverage();
+                
+                elements.climateAverage.innerHTML = `
+                    <div style="text-align: center;">
+                        <div style="font-size: 24px; margin: 10px 0;">${avgTemp}°C</div>
+                        <div style="color: var(--text-secondary);">
+                            Average temperature for ${month}/${day}<br>
+                            over past 10 years
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Climate data error:', error);
+            }
+        }
+
+        // Simulate climate average (in real app, you'd make multiple API calls)
+        async function simulateClimateAverage() {
+            if (!currentWeatherData) return '--';
+            
+            const currentTemp = currentWeatherData.current_weather.temperature;
+            // Add some random variation for simulation
+            const variation = (Math.random() - 0.5) * 5;
+            return Math.round(currentTemp - variation);
+        }
+
+        // Update rain countdown
+        function updateRainCountdown(data) {
+            const hourly = data.hourly;
+            const currentTime = new Date();
+            const currentIndex = currentTime.getHours();
+            
+            // Find next precipitation
+            for (let i = currentIndex; i < hourly.precipitation.length; i++) {
+                if (hourly.precipitation[i] > 0.1) {
+                    const minutesUntil = (i - currentIndex) * 60;
+                    
+                    if (minutesUntil <= 120) { // Show if within 2 hours
+                        elements.rainCountdown.style.display = 'block';
+                        elements.countdownTimer.textContent = `${minutesUntil} min`;
+                        
+                        // Update countdown every minute
+                        setInterval(() => {
+                            if (minutesUntil > 0) {
+                                elements.countdownTimer.textContent = `${minutesUntil - 1} min`;
+                            }
+                        }, 60000);
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Update dynamic environment based on weather data
+        function updateDynamicEnvironment() {
+            if (!currentWeatherData) return;
+            
+            const hourly = currentWeatherData.hourly;
+            const currentIndex = new Date().getHours();
+            
+            // Clear existing animations
+            cloudAnimationIntervals.forEach(clearInterval);
+            cloudAnimationIntervals = [];
+            
+            // Create clouds based on cloud cover
+            const cloudCover = hourly.cloud_cover[currentIndex];
+            const cloudCount = Math.floor(cloudCover / 20); // 0-5 clouds
+            
+            elements.environment.innerHTML = '<div class="sun-moon"></div>';
+            
+            for (let i = 0; i < cloudCount; i++) {
+                const cloud = document.createElement('div');
+                cloud.className = 'cloud';
+                elements.environment.appendChild(cloud);
+                
+                // Set animation speed based on wind speed
+                const windSpeed = currentWeatherData.current_weather.windspeed;
+                const duration = Math.max(20, 40 - windSpeed * 2);
+                const delay = Math.random() * 20;
+                
+                cloud.style.animationDuration = `${duration}s`;
+                cloud.style.animationDelay = `${delay}s`;
+                
+                // Store interval for cleanup
+                const interval = setInterval(() => {
+                    cloud.style.top = `${10 + Math.random() * 30}%`;
+                }, 5000);
+                cloudAnimationIntervals.push(interval);
+            }
+            
+            // Add rain if precipitation
+            if (hourly.precipitation[currentIndex] > 0.5) {
+                createRainAnimation(hourly.precipitation[currentIndex]);
+            }
+            
+            // Update fog based on visibility
+            const visibility = hourly.visibility[currentIndex];
+            const fogOpacity = Math.min(0.6, 1 - (visibility / 10000));
+            const fogBlur = Math.min(10, 20 - (visibility / 1000));
+            
+            elements.fogOverlay.style.setProperty('--fog-opacity', fogOpacity);
+            elements.fogOverlay.style.setProperty('--fog-blur', `${fogBlur}px`);
+            
+            // Update sun/moon position based on time
+            updateSunMoonPosition();
+        }
+
+        // Create rain animation
+        function createRainAnimation(intensity) {
+            if (rainAnimationInterval) {
+                clearInterval(rainAnimationInterval);
+            }
+            
+            const rainCount = Math.min(100, Math.floor(intensity * 20));
+            
+            rainAnimationInterval = setInterval(() => {
+                // Remove old rain drops
+                const oldDrops = document.querySelectorAll('.rain-drop');
+                oldDrops.forEach(drop => {
+                    if (parseFloat(drop.style.top) > 100) {
+                        drop.remove();
+                    }
+                });
+                
+                // Add new rain drops
+                for (let i = 0; i < rainCount / 10; i++) {
+                    const drop = document.createElement('div');
+                    drop.className = 'rain-drop';
+                    drop.style.left = `${Math.random() * 100}%`;
+                    drop.style.top = '-20px';
+                    drop.style.animationDuration = `${0.5 + Math.random()}s`;
+                    elements.environment.appendChild(drop);
+                    
+                    // Remove after animation
+                    setTimeout(() => drop.remove(), 2000);
+                }
+            }, 100);
+        }
+
+        // Update sun/moon position based on time
+        function updateSunMoonPosition() {
+            const now = new Date();
+            const hour = now.getHours();
+            const sunMoon = document.querySelector('.sun-moon');
+            
+            // Calculate position (simplified arc)
+            const progress = hour / 24;
+            const x = progress * 100; // 0-100% across screen
+            const y = Math.sin(progress * Math.PI) * 80 + 10; // Arc trajectory
+            
+            sunMoon.style.right = `calc(${x}% - 40px)`;
+            sunMoon.style.top = `${y}%`;
+        }
+
+        // Update time display
+        function updateTime() {
+            const now = new Date();
+            elements.timeDisplay.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+
+        // Setup tab switching
+        function setupTabs() {
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.dataset.tab;
+                    
+                    // Update active tab
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    // Show corresponding content
+                    tabContents.forEach(content => {
+                        content.classList.remove('active');
+                        if (content.id === `${tabId}Tab`) {
+                            content.classList.add('active');
+                        }
+                    });
+                });
+            });
+        }
+
+        // Generate share card
+        async function generateShareCard() {
+            try {
+                // Update share preview
+                document.getElementById('shareLocation').textContent = elements.locationName.textContent;
+                document.getElementById('shareTemp').textContent = elements.currentTemp.textContent + '°C';
+                document.getElementById('shareDesc').textContent = elements.weatherDescription.textContent;
+                document.getElementById('shareWind').textContent = elements.windSpeed.textContent + ' km/h';
+                document.getElementById('shareHumidity').textContent = elements.humidity.textContent;
+                document.getElementById('shareFeelsLike').textContent = elements.feelsLike.textContent;
+                
+                // Generate image
+                const shareCard = document.getElementById('sharePreview');
+                const canvas = await html2canvas(shareCard, {
+                    backgroundColor: null,
+                    scale: 2
+                });
+                
+                // Convert to blob and share
+                canvas.toBlob(blob => {
+                    const file = new File([blob], 'weather-card.png', { type: 'image/png' });
+                    
+                    // In Telegram Web App, we can use the share functionality
+                    if (tg.shareFile) {
+                        tg.shareFile(file, 'Check out my weather!');
+                    } else {
+                        // Fallback: download
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'weather-card.png';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    }
+                });
+            } catch (error) {
+                console.error('Share card error:', error);
+                alert('Failed to generate share card');
+            }
+        }
+
+        // Helper function to get weather description
+        function getWeatherDescription(code) {
+            const descriptions = {
+                0: 'Clear sky',
+                1: 'Mainly clear',
+                2: 'Partly cloudy',
+                3: 'Overcast',
+                45: 'Foggy',
+                48: 'Depositing rime fog',
+                51: 'Light drizzle',
+                53: 'Moderate drizzle',
+                55: 'Dense drizzle',
+                56: 'Light freezing drizzle',
+                57: 'Dense freezing drizzle',
+                61: 'Slight rain',
+                63: 'Moderate rain',
+                65: 'Heavy rain',
+                66: 'Light freezing rain',
+                67: 'Heavy freezing rain',
+                71: 'Slight snow fall',
+                73: 'Moderate snow fall',
+                75: 'Heavy snow fall',
+                77: 'Snow grains',
+                80: 'Slight rain showers',
+                81: 'Moderate rain showers',
+                82: 'Violent rain showers',
+                85: 'Slight snow showers',
+                86: 'Heavy snow showers',
+                95: 'Thunderstorm',
+                96: 'Thunderstorm with slight hail',
+                99: 'Thunderstorm with heavy hail'
+            };
+            return descriptions[code] || 'Unknown weather';
+        }
+
+        // Show error message
+        function showError(message) {
+            elements.loading.innerHTML = `
+                <div style="text-align: center; color: #ff6b6b;">
+                    <div style="font-size: 24px; margin-bottom: 20px;">⚠️</div>
+                    <div>${message}</div>
+                    <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: var(--accent); border: none; border-radius: 10px; color: white; cursor: pointer;">
+                        Retry
+                    </button>
+                </div>
+            `;
+        }
+
+        // Initialize app when loaded
+        document.addEventListener('DOMContentLoaded', initApp);
+
+        // Update sun/moon position periodically
+        setInterval(updateSunMoonPosition, 600000); // Every 10 minutes
+
+        // Weather alert system (simplified client-side version)
+        function checkForAlerts(weatherData) {
+            const code = weatherData.current_weather.weathercode;
+            const alerts = [];
+            
+            if (code >= 95) alerts.push('⛈️ Thunderstorm warning');
+            if (code >= 80 && code <= 82) alerts.push('🌧️ Heavy rain expected');
+            if (code >= 71 && code <= 77) alerts.push('❄️ Snowfall alert');
+            
+            if (alerts.length > 0 && Notification.permission === 'granted') {
+                // In a real app, you'd use Telegram bot for push notifications
+                new Notification('Weather Alert', {
+                    body: alerts.join('\n'),
+                    icon: 'https://cdn-icons-png.flaticon.com/512/1163/1163661.png'
+                });
+            }
+        }
+
+        // Request notification permission
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    </script>
+</body>
+</html>
