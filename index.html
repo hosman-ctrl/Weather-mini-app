@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WeatherFlow - Material 3 Expressive</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://unpkg.com/@dotlottie/player-component@latest/dist/dotlottie-player.mjs" type="module"></script>
     <script type="module">
         import { locationManager, init } from 'https://unpkg.com/@telegram-apps/sdk?module';
         window.TelegramSDK = { locationManager, init };
@@ -87,6 +86,19 @@
         @keyframes text-pulse {
             0%, 100% { opacity: 0.7; }
             50% { opacity: 1; }
+        }
+
+        /* Canvas Container - Fixed 2cm size */
+        .canvas-container {
+            width: 2cm !important;
+            height: 2cm !important;
+            position: relative !important;
+        }
+
+        #wigglyCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
         }
 
         /* Weather Elements Container */
@@ -824,16 +836,11 @@
     </style>
 </head>
 <body class="clear-day">
-    <!-- Loading Screen with Lottie Animation -->
+    <!-- Loading Screen with Wiggly Ring -->
     <div class="loading-screen" id="loadingScreen" style="background: #808080;">
-        <dotlottie-player 
-            src="https://lottie.host/804d9c4c-2041-432d-8868-b8078f4a1801/6M004nLox6.json" 
-            background="transparent" 
-            speed="1" 
-            style="width: 150px; height: 150px;" 
-            loop 
-            autoplay>
-        </dotlottie-player>
+        <div class="canvas-container">
+            <canvas id="wigglyCanvas"></canvas>
+        </div>
         <div class="loading-text" id="loadingText">Detecting your location...</div>
     </div>
 
@@ -932,6 +939,126 @@
     </div>
 
     <script type="module">
+        // ==================== WIGGLY RING LOADING ANIMATION ====================
+        (function() {
+            const canvas = document.getElementById('wigglyCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Configuration - 20 crests and troughs
+            const color = '#FFFFFF'; // White line
+            const lineWidth = 4;
+            const speed = 0.02;      // Slower speed for smoother animation
+            const amplitude = 2.5;   // Reduced amplitude for 2cm size
+            const frequency = 20;    // 20 crests and troughs as requested
+            
+            let time = 0;
+            let animationId = null;
+
+            function resize() {
+                // Fixed 2cm container
+                const parent = canvas.parentElement;
+                const dpr = window.devicePixelRatio || 1;
+                
+                // Convert 2cm to pixels (1cm ≈ 37.8px at 96dpi)
+                const cmInPixels = 37.8;
+                const size = 2 * cmInPixels; // 2cm in pixels
+                
+                canvas.width = size * dpr;
+                canvas.height = size * dpr;
+                
+                // Scale CSS to fit parent
+                canvas.style.width = '100%';
+                canvas.style.height = '100%';
+                
+                // Scale the context
+                ctx.scale(dpr, dpr);
+            }
+
+            function draw() {
+                const width = 2 * 37.8; // 2cm in pixels
+                const height = 2 * 37.8; // 2cm in pixels
+                const centerX = width / 2;
+                const centerY = height / 2;
+                
+                // Base radius (1cm = diameter/2)
+                const baseRadius = (width / 2) - lineWidth - amplitude;
+                
+                ctx.clearRect(0, 0, width, height);
+                ctx.beginPath();
+                
+                // Create 20 crests and troughs using combined sine and cosine waves
+                for (let angle = 0; angle <= Math.PI * 2; angle += 0.02) {
+                    // Primary wave with 20 crests (frequency = 20)
+                    const primaryWave = Math.cos(angle * frequency + time) * amplitude;
+                    
+                    // Secondary wave for organic feel with different frequency
+                    const secondaryWave = Math.sin(angle * 7 - time * 1.5) * (amplitude * 0.4);
+                    
+                    // Tertiary wave for more complexity
+                    const tertiaryWave = Math.cos(angle * 13 + time * 0.7) * (amplitude * 0.2);
+                    
+                    // Combine all waves
+                    const offset = primaryWave + secondaryWave + tertiaryWave;
+                    
+                    // Calculate radius with offset
+                    const radius = baseRadius + offset;
+                    
+                    // Convert polar to cartesian coordinates
+                    const x = centerX + radius * Math.cos(angle);
+                    const y = centerY + radius * Math.sin(angle);
+                    
+                    if (angle === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                
+                ctx.closePath();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = lineWidth;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.stroke();
+                
+                // Update time for animation
+                time += speed;
+                
+                // Continue animation if canvas is visible
+                if (canvas.offsetParent !== null) {
+                    animationId = requestAnimationFrame(draw);
+                }
+            }
+
+            function startAnimation() {
+                if (!animationId) {
+                    resize();
+                    draw();
+                }
+            }
+
+            function stopAnimation() {
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                }
+            }
+
+            // Initialize on load
+            window.addEventListener('load', () => {
+                startAnimation();
+            });
+
+            // Handle resize
+            window.addEventListener('resize', resize);
+            
+            // Make functions available globally
+            window.wigglyRing = {
+                start: startAnimation,
+                stop: stopAnimation
+            };
+        })();
+
         // ==================== TELEGRAM SDK INTEGRATION ====================
         const { locationManager, init } = window.TelegramSDK;
         
@@ -962,7 +1089,6 @@
 
         let userLocation = null;
         let currentWeatherData = null;
-        let animationInterval = null;
 
         // Initialize the app
         async function initApp() {
@@ -1036,6 +1162,7 @@
 
         async function getLocationByIP() {
             try {
+                updateLoadingText('Getting approximate location...');
                 const response = await fetch('https://ipapi.co/json/');
                 if (!response.ok) throw new Error('IP location failed');
                 
