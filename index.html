@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WeatherFlow - Material 3 Expressive</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/@dotlottie/player-component@latest/dist/dotlottie-player.mjs" type="module"></script>
     <script type="module">
         import { locationManager, init } from 'https://unpkg.com/@telegram-apps/sdk?module';
-        
-        // Make it globally available
         window.TelegramSDK = { locationManager, init };
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -59,19 +58,14 @@
             will-change: background;
         }
 
-        /* SVG Filter for Wavy Ring */
-        svg[width="0"][height="0"] {
-            position: absolute;
-        }
-
-        /* Material 3 Expressive Loading Animation - Wavy Ring */
+        /* Loading Screen with Grey Background */
         .loading-screen {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: var(--weather-gradient);
+            background: #808080 !important; /* Grey background */
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -80,48 +74,13 @@
             transition: opacity var(--animation-medium) ease;
         }
 
-        .expressive-loader {
-            width: 120px;
-            height: 120px;
-            position: relative;
-            margin-bottom: 32px;
-            filter: url(#wavy);
-        }
-
-        #wavy-ring {
-            filter: url(#wavy);
-            stroke-dasharray: 283;
-            stroke-dashoffset: 140;
-            transform-origin: center;
-            transform-box: fill-box;
-            animation: 
-                rotate 2s linear infinite,
-                pulse 3s ease-in-out infinite;
-            will-change: transform, stroke-dashoffset;
-        }
-
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        @keyframes pulse {
-            0%, 100% { 
-                stroke-dashoffset: 140;
-                opacity: 0.9;
-            }
-            50% { 
-                stroke-dashoffset: 200;
-                opacity: 1;
-            }
-        }
-
         .loading-text {
             font-size: 16px;
             font-weight: 500;
-            color: var(--weather-on-gradient);
+            color: white;
             letter-spacing: 0.5px;
             opacity: 0.9;
+            margin-top: 20px;
             animation: text-pulse 2s ease-in-out infinite;
         }
 
@@ -130,8 +89,8 @@
             50% { opacity: 1; }
         }
 
-        /* Minimal GPU-accelerated Weather Animations */
-        .weather-animation {
+        /* Weather Elements Container */
+        .weather-elements {
             position: fixed;
             top: 0;
             left: 0;
@@ -139,47 +98,87 @@
             height: 100%;
             pointer-events: none;
             z-index: 1;
-            opacity: 0.1;
             overflow: hidden;
+        }
+
+        /* Sun/Moon Element */
+        .sun-moon {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            box-shadow: 0 0 40px rgba(255, 255, 255, 0.6);
+            transition: all 1s ease;
+            will-change: transform, box-shadow, background;
+        }
+
+        .sun {
+            background: linear-gradient(135deg, #FFB74D, #FF9800);
+            box-shadow: 0 0 60px rgba(255, 183, 77, 0.8), 0 0 100px rgba(255, 183, 77, 0.4);
+        }
+
+        .moon {
+            background: linear-gradient(135deg, #E0E0E0, #B0B0B0);
+            box-shadow: 0 0 40px rgba(224, 224, 224, 0.6), 0 0 80px rgba(224, 224, 224, 0.3);
+        }
+
+        /* Cloud Element */
+        .cloud {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50px;
+            filter: blur(2px);
+            transition: all 3s ease;
             will-change: transform, opacity;
         }
 
-        .weather-particle {
+        .cloud::before,
+        .cloud::after {
+            content: '';
             position: absolute;
-            will-change: transform;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            filter: blur(2px);
         }
 
-        /* Rain particles - minimal and GPU accelerated */
-        .rain-particle {
+        /* Rain Element */
+        .rain-drop {
+            position: absolute;
             width: 2px;
-            height: 20px;
-            background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.8));
+            height: 25px;
+            background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.9));
             border-radius: 1px;
             transform: translateZ(0);
-            backface-visibility: hidden;
-            perspective: 1000;
+            will-change: transform, opacity;
         }
 
-        /* Snow particles */
-        .snow-particle {
-            width: 6px;
-            height: 6px;
+        /* Snow Element */
+        .snow-flake {
+            position: absolute;
+            width: 8px;
+            height: 8px;
             background: white;
             border-radius: 50%;
             filter: blur(1px);
             transform: translateZ(0);
-            backface-visibility: hidden;
-            perspective: 1000;
+            will-change: transform, opacity;
         }
 
-        /* Cloud particles */
-        .cloud-particle {
-            background: rgba(255, 255, 255, 0.3);
+        /* Star Element */
+        .star {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: white;
             border-radius: 50%;
-            filter: blur(8px);
-            transform: translateZ(0);
-            backface-visibility: hidden;
-            perspective: 1000;
+            box-shadow: 0 0 6px white;
+            animation: twinkle 3s infinite alternate;
+            will-change: opacity;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
         }
 
         /* Typography with Rounded Clear Font */
@@ -766,15 +765,21 @@
         }
 
         body.clear-night {
-            --weather-primary: #303F9F;
-            --weather-secondary: #1A237E;
-            --weather-gradient: linear-gradient(135deg, #303F9F 0%, #1A237E 100%);
+            --weather-primary: #1A237E;
+            --weather-secondary: #0D47A1;
+            --weather-gradient: linear-gradient(135deg, #1A237E 0%, #0D47A1 100%);
         }
 
-        body.partly-cloudy {
+        body.partly-cloudy-day {
             --weather-primary: #78909C;
-            --weather-secondary: #546E7A;
-            --weather-gradient: linear-gradient(135deg, #78909C 0%, #546E7A 100%);
+            --weather-secondary: #B0BEC5;
+            --weather-gradient: linear-gradient(135deg, #78909C 0%, #B0BEC5 100%);
+        }
+
+        body.partly-cloudy-night {
+            --weather-primary: #455A64;
+            --weather-secondary: #607D8B;
+            --weather-gradient: linear-gradient(135deg, #455A64 0%, #607D8B 100%);
         }
 
         body.cloudy {
@@ -794,7 +799,7 @@
             --weather-secondary: #BBDEFB;
             --weather-gradient: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
             --weather-on-gradient: #1C1B1F;
-            --weather-surface: rgba(255, 255, 255, 0.9);
+            --weather-surface: rgba(255, 255, 255, 0.95);
         }
 
         body.stormy {
@@ -808,7 +813,7 @@
             --weather-secondary: #B0BEC5;
             --weather-gradient: linear-gradient(135deg, #CFD8DC 0%, #B0BEC5 100%);
             --weather-on-gradient: #1C1B1F;
-            --weather-surface: rgba(255, 255, 255, 0.9);
+            --weather-surface: rgba(255, 255, 255, 0.95);
         }
 
         body.thunderstorm {
@@ -819,26 +824,21 @@
     </style>
 </head>
 <body class="clear-day">
-    <!-- SVG Filter for Wavy Ring Animation -->
-    <svg style="width:0; height:0;">
-        <filter id="wavy">
-            <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" result="noise" />
-            <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" />
-        </filter>
-    </svg>
-
-    <!-- Loading Screen with Material 3 Expressive Wavy Ring -->
-    <div class="loading-screen" id="loadingScreen">
-        <div class="expressive-loader">
-            <svg viewBox="0 0 100 100" width="120" height="120">
-                <circle id="wavy-ring" cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="4" />
-            </svg>
-        </div>
-        <div class="loading-text on-gradient" id="loadingText">Detecting your location...</div>
+    <!-- Loading Screen with Lottie Animation -->
+    <div class="loading-screen" id="loadingScreen" style="background: #808080;">
+        <dotlottie-player 
+            src="https://lottie.host/804d9c4c-2041-432d-8868-b8078f4a1801/6M004nLox6.json" 
+            background="transparent" 
+            speed="1" 
+            style="width: 150px; height: 150px;" 
+            loop 
+            autoplay>
+        </dotlottie-player>
+        <div class="loading-text" id="loadingText">Detecting your location...</div>
     </div>
 
-    <!-- Weather Animation Layer -->
-    <div class="weather-animation" id="weatherAnimation"></div>
+    <!-- Weather Elements Container -->
+    <div class="weather-elements" id="weatherElements"></div>
 
     <!-- Floating Search Bar -->
     <div class="search-container">
@@ -940,7 +940,7 @@
             loadingScreen: document.getElementById('loadingScreen'),
             loadingText: document.getElementById('loadingText'),
             appContainer: document.getElementById('appContainer'),
-            weatherAnimation: document.getElementById('weatherAnimation'),
+            weatherElements: document.getElementById('weatherElements'),
             searchInput: document.getElementById('searchInput'),
             searchButton: document.getElementById('searchButton'),
             locationName: document.getElementById('locationName'),
@@ -962,7 +962,7 @@
 
         let userLocation = null;
         let currentWeatherData = null;
-        let animationParticles = [];
+        let animationInterval = null;
 
         // Initialize the app
         async function initApp() {
@@ -1087,83 +1087,158 @@
             }
         }
 
-        // ==================== MINIMAL WEATHER ANIMATIONS ====================
-        function createWeatherAnimation(weatherCode, isDay) {
-            // Clear existing animations
-            clearWeatherAnimations();
-            elements.weatherAnimation.innerHTML = '';
+        // ==================== WEATHER ELEMENTS ANIMATION ====================
+        function createWeatherElements(weatherCode, isDay, cloudCover = 50) {
+            // Clear existing elements
+            clearWeatherElements();
+            elements.weatherElements.innerHTML = '';
             
-            // Create minimal particles based on weather
-            const particleCount = 15; // Minimal for performance
-            const isRain = weatherCode >= 51 && weatherCode <= 65;
-            const isSnow = weatherCode >= 71 && weatherCode <= 77;
-            const isCloudy = weatherCode >= 1 && weatherCode <= 3;
+            // Create sun or moon based on time of day
+            createSunMoon(isDay);
             
-            if (isRain) {
-                createRainParticles(particleCount);
-            } else if (isSnow) {
-                createSnowParticles(particleCount);
-            } else if (isCloudy) {
-                createCloudParticles(3); // Even fewer clouds for performance
+            // Create clouds based on cloud cover
+            if (weatherCode >= 1 && weatherCode <= 3) {
+                createClouds(cloudCover);
+            }
+            
+            // Create rain or snow based on weather code
+            if (weatherCode >= 51 && weatherCode <= 65) {
+                createRain();
+            } else if (weatherCode >= 71 && weatherCode <= 77) {
+                createSnow();
+            }
+            
+            // Create stars for clear night
+            if (!isDay && (weatherCode === 0 || weatherCode === 1)) {
+                createStars();
+            }
+            
+            // Create fog for foggy weather
+            if (weatherCode === 45 || weatherCode === 48) {
+                createFog();
             }
         }
 
-        function createRainParticles(count) {
-            for (let i = 0; i < count; i++) {
-                const particle = document.createElement('div');
-                particle.className = 'weather-particle rain-particle';
-                particle.style.left = `${Math.random() * 100}%`;
-                particle.style.top = '-20px';
+        function createSunMoon(isDay) {
+            const sunMoon = document.createElement('div');
+            sunMoon.className = `sun-moon ${isDay ? 'sun' : 'moon'}`;
+            
+            // Position based on time of day
+            const hour = new Date().getHours();
+            const x = 20 + (hour / 24) * 60; // Move across screen based on time
+            const y = isDay ? 20 : 80; // Sun higher, moon lower
+            
+            sunMoon.style.left = `${x}%`;
+            sunMoon.style.top = `${y}%`;
+            
+            elements.weatherElements.appendChild(sunMoon);
+        }
+
+        function createClouds(cloudCover) {
+            const cloudCount = Math.min(5, Math.ceil(cloudCover / 20));
+            
+            for (let i = 0; i < cloudCount; i++) {
+                const cloud = document.createElement('div');
+                cloud.className = 'cloud';
                 
-                // Random animation duration
-                const duration = 1 + Math.random() * 1;
+                // Random size and position
+                const size = 60 + Math.random() * 80;
+                const top = 10 + Math.random() * 40;
+                const left = -size - Math.random() * 100;
+                const opacity = 0.3 + (Math.random() * 0.4);
+                const speed = 20 + Math.random() * 20;
+                
+                cloud.style.width = `${size}px`;
+                cloud.style.height = `${size * 0.5}px`;
+                cloud.style.top = `${top}%`;
+                cloud.style.left = `${left}px`;
+                cloud.style.opacity = opacity;
+                
+                // Create cloud "bubbles"
+                cloud.innerHTML = `
+                    <div style="position: absolute; width: 60%; height: 60%; top: -30%; left: 10%; background: inherit; border-radius: 50%;"></div>
+                    <div style="position: absolute; width: 40%; height: 40%; top: -20%; right: 10%; background: inherit; border-radius: 50%;"></div>
+                `;
+                
+                elements.weatherElements.appendChild(cloud);
+                
+                // Animate cloud
+                let startTime = null;
+                function animateCloud(time) {
+                    if (!startTime) startTime = time;
+                    const elapsed = (time - startTime) / 1000;
+                    const progress = elapsed / speed;
+                    
+                    if (progress <= 1) {
+                        const x = left + (window.innerWidth + size + 100) * progress;
+                        cloud.style.transform = `translateX(${x}px)`;
+                        requestAnimationFrame(animateCloud);
+                    } else {
+                        cloud.remove();
+                    }
+                }
+                
+                requestAnimationFrame(animateCloud);
+            }
+        }
+
+        function createRain() {
+            for (let i = 0; i < 30; i++) { // 30 rain drops for minimal performance
+                const drop = document.createElement('div');
+                drop.className = 'rain-drop';
+                
+                const left = Math.random() * 100;
+                const duration = 1 + Math.random();
                 const delay = Math.random() * 2;
                 
-                // Use CSS transform for GPU acceleration
-                particle.style.animation = `none`;
-                particle.style.transform = `translateY(-20px)`;
+                drop.style.left = `${left}%`;
+                drop.style.top = '-20px';
                 
-                elements.weatherAnimation.appendChild(particle);
+                elements.weatherElements.appendChild(drop);
                 
-                // Use requestAnimationFrame for smooth animation
+                // Animate rain drop
                 let startTime = null;
                 function animateRain(time) {
                     if (!startTime) startTime = time;
                     const elapsed = (time - startTime) / 1000;
                     
                     if (elapsed < delay) {
-                        animationParticles.push(requestAnimationFrame(animateRain));
+                        requestAnimationFrame(animateRain);
                         return;
                     }
                     
                     const progress = (elapsed - delay) / duration;
                     if (progress <= 1) {
                         const y = -20 + (window.innerHeight + 40) * progress;
-                        const x = Math.sin(progress * Math.PI * 2) * 20;
-                        particle.style.transform = `translate(${x}px, ${y}px)`;
-                        particle.style.opacity = 1 - progress * 0.5;
-                        animationParticles.push(requestAnimationFrame(animateRain));
+                        const x = left + Math.sin(progress * Math.PI) * 10;
+                        drop.style.transform = `translate(${x}px, ${y}px)`;
+                        drop.style.opacity = 1 - progress;
+                        requestAnimationFrame(animateRain);
                     } else {
-                        particle.remove();
+                        drop.remove();
                     }
                 }
                 
-                animationParticles.push(requestAnimationFrame(animateRain));
+                requestAnimationFrame(animateRain);
             }
         }
 
-        function createSnowParticles(count) {
-            for (let i = 0; i < count; i++) {
-                const particle = document.createElement('div');
-                particle.className = 'weather-particle snow-particle';
-                particle.style.left = `${Math.random() * 100}%`;
-                particle.style.top = '-10px';
-                particle.style.opacity = '0.8';
+        function createSnow() {
+            for (let i = 0; i < 20; i++) { // 20 snow flakes
+                const flake = document.createElement('div');
+                flake.className = 'snow-flake';
                 
-                const duration = 3 + Math.random() * 3;
+                const left = Math.random() * 100;
+                const duration = 3 + Math.random() * 2;
                 const delay = Math.random() * 3;
+                const size = 4 + Math.random() * 4;
                 
-                elements.weatherAnimation.appendChild(particle);
+                flake.style.left = `${left}%`;
+                flake.style.top = '-10px';
+                flake.style.width = `${size}px`;
+                flake.style.height = `${size}px`;
+                
+                elements.weatherElements.appendChild(flake);
                 
                 let startTime = null;
                 function animateSnow(time) {
@@ -1171,64 +1246,60 @@
                     const elapsed = (time - startTime) / 1000;
                     
                     if (elapsed < delay) {
-                        animationParticles.push(requestAnimationFrame(animateSnow));
+                        requestAnimationFrame(animateSnow);
                         return;
                     }
                     
                     const progress = (elapsed - delay) / duration;
                     if (progress <= 1) {
                         const y = -10 + (window.innerHeight + 20) * progress;
-                        const x = Math.sin(progress * Math.PI * 4) * 40;
+                        const x = left + Math.sin(progress * Math.PI * 2) * 30;
                         const rotation = progress * 360;
-                        
-                        particle.style.transform = `translate(${x}px, ${y}px) rotate(${rotation}deg)`;
-                        particle.style.opacity = 0.8 - progress * 0.7;
-                        animationParticles.push(requestAnimationFrame(animateSnow));
+                        flake.style.transform = `translate(${x}px, ${y}px) rotate(${rotation}deg)`;
+                        flake.style.opacity = 1 - progress * 0.5;
+                        requestAnimationFrame(animateSnow);
                     } else {
-                        particle.remove();
+                        flake.remove();
                     }
                 }
                 
-                animationParticles.push(requestAnimationFrame(animateSnow));
+                requestAnimationFrame(animateSnow);
             }
         }
 
-        function createCloudParticles(count) {
-            for (let i = 0; i < count; i++) {
-                const particle = document.createElement('div');
-                particle.className = 'weather-particle cloud-particle';
-                particle.style.width = `${60 + Math.random() * 60}px`;
-                particle.style.height = `${30 + Math.random() * 30}px`;
-                particle.style.left = `-${100 + Math.random() * 50}px`;
-                particle.style.top = `${10 + Math.random() * 60}%`;
-                particle.style.opacity = `${0.2 + Math.random() * 0.2}`;
+        function createStars() {
+            for (let i = 0; i < 50; i++) { // 50 stars
+                const star = document.createElement('div');
+                star.className = 'star';
                 
-                elements.weatherAnimation.appendChild(particle);
+                const left = Math.random() * 100;
+                const top = Math.random() * 100;
+                const delay = Math.random() * 3;
                 
-                const duration = 30 + Math.random() * 30;
-                let startTime = null;
+                star.style.left = `${left}%`;
+                star.style.top = `${top}%`;
+                star.style.animationDelay = `${delay}s`;
                 
-                function animateCloud(time) {
-                    if (!startTime) startTime = time;
-                    const elapsed = (time - startTime) / 1000;
-                    const progress = elapsed / duration;
-                    
-                    if (progress <= 1) {
-                        const x = -100 + (window.innerWidth + 200) * progress;
-                        particle.style.transform = `translateX(${x}px)`;
-                        animationParticles.push(requestAnimationFrame(animateCloud));
-                    } else {
-                        particle.remove();
-                    }
-                }
-                
-                animationParticles.push(requestAnimationFrame(animateCloud));
+                elements.weatherElements.appendChild(star);
             }
         }
 
-        function clearWeatherAnimations() {
-            animationParticles.forEach(raf => cancelAnimationFrame(raf));
-            animationParticles = [];
+        function createFog() {
+            const fog = document.createElement('div');
+            fog.style.position = 'absolute';
+            fog.style.top = '0';
+            fog.style.left = '0';
+            fog.style.width = '100%';
+            fog.style.height = '100%';
+            fog.style.background = 'linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.1) 50%, transparent)';
+            fog.style.opacity = '0.3';
+            fog.style.filter = 'blur(30px)';
+            
+            elements.weatherElements.appendChild(fog);
+        }
+
+        function clearWeatherElements() {
+            elements.weatherElements.innerHTML = '';
         }
 
         // ==================== WEATHER DATA FETCHING ====================
@@ -1271,7 +1342,7 @@
                 
                 updateCurrentWeatherUI(data);
                 updateWeatherBackground(data.current_weather.weathercode, data.current_weather.is_day);
-                createWeatherAnimation(data.current_weather.weathercode, data.current_weather.is_day);
+                createWeatherElements(data.current_weather.weathercode, data.current_weather.is_day, data.hourly.cloud_cover[new Date().getHours()] || 50);
                 
             } catch (error) {
                 console.error('Current weather error:', error);
@@ -1462,23 +1533,41 @@
             
             // Set weather-specific background class
             if (!isDay) {
-                document.body.classList.add('clear-night');
-            } else if (weatherCode === 0) {
-                document.body.classList.add('clear-day');
-            } else if (weatherCode === 1 || weatherCode === 2) {
-                document.body.classList.add('partly-cloudy');
-            } else if (weatherCode === 3) {
-                document.body.classList.add('cloudy');
-            } else if (weatherCode >= 51 && weatherCode <= 65) {
-                document.body.classList.add('rainy');
-            } else if (weatherCode >= 71 && weatherCode <= 77) {
-                document.body.classList.add('snowy');
-            } else if (weatherCode >= 95 && weatherCode <= 99) {
-                document.body.classList.add('thunderstorm');
-            } else if (weatherCode === 45 || weatherCode === 48) {
-                document.body.classList.add('foggy');
+                if (weatherCode === 0) {
+                    document.body.classList.add('clear-night');
+                } else if (weatherCode === 1 || weatherCode === 2) {
+                    document.body.classList.add('partly-cloudy-night');
+                } else if (weatherCode === 3) {
+                    document.body.classList.add('cloudy');
+                } else if (weatherCode >= 51 && weatherCode <= 65) {
+                    document.body.classList.add('rainy');
+                } else if (weatherCode >= 71 && weatherCode <= 77) {
+                    document.body.classList.add('snowy');
+                } else if (weatherCode >= 95 && weatherCode <= 99) {
+                    document.body.classList.add('thunderstorm');
+                } else if (weatherCode === 45 || weatherCode === 48) {
+                    document.body.classList.add('foggy');
+                } else {
+                    document.body.classList.add('clear-night');
+                }
             } else {
-                document.body.classList.add('clear-day');
+                if (weatherCode === 0) {
+                    document.body.classList.add('clear-day');
+                } else if (weatherCode === 1 || weatherCode === 2) {
+                    document.body.classList.add('partly-cloudy-day');
+                } else if (weatherCode === 3) {
+                    document.body.classList.add('cloudy');
+                } else if (weatherCode >= 51 && weatherCode <= 65) {
+                    document.body.classList.add('rainy');
+                } else if (weatherCode >= 71 && weatherCode <= 77) {
+                    document.body.classList.add('snowy');
+                } else if (weatherCode >= 95 && weatherCode <= 99) {
+                    document.body.classList.add('thunderstorm');
+                } else if (weatherCode === 45 || weatherCode === 48) {
+                    document.body.classList.add('foggy');
+                } else {
+                    document.body.classList.add('clear-day');
+                }
             }
         }
 
@@ -1625,8 +1714,8 @@
             elements.loadingScreen.innerHTML = `
                 <div class="error-state">
                     <span class="material-symbols-rounded error-icon">error</span>
-                    <div class="error-title on-gradient">Oops!</div>
-                    <div class="error-message on-gradient">${message}</div>
+                    <div class="error-title" style="color: white;">Oops!</div>
+                    <div class="error-message" style="color: white;">${message}</div>
                     <button class="retry-button" onclick="location.reload()" style="margin-top: 16px;">Try Again</button>
                 </div>
             `;
