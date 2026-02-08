@@ -49,6 +49,101 @@
             --shape-medium: 16px;
         }
 
+        /* ==================== TELEGRAM NATIVE HEADER ==================== */
+        .app-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 64px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            background: var(--weather-gradient);
+            transition: all var(--animation-medium) ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .app-header.shrunk {
+            height: 56px;
+            background: var(--weather-surface) !important;
+            box-shadow: var(--elevation-1);
+        }
+
+        .bot-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .profile-pic {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--weather-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .profile-pic span {
+            color: white;
+            font-size: 24px !important;
+        }
+
+        .title-large {
+            font-size: 22px;
+            font-weight: 400;
+            line-height: 28px;
+            letter-spacing: 0;
+            font-feature-settings: 'ss01' on;
+        }
+
+        /* Header text colors */
+        .on-gradient {
+            color: var(--weather-on-gradient) !important;
+        }
+
+        .on-surface {
+            color: var(--weather-on-surface) !important;
+        }
+
+        /* Adjust container padding for header */
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 80px 20px 100px 20px; /* Reduced top padding for header */
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Adjust search bar position for header */
+        .search-container {
+            position: fixed;
+            top: 84px; /* Below header */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 400px;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all var(--animation-medium) ease;
+            will-change: transform, opacity;
+        }
+
+        /* Search bar opacity when scrolling deep */
+        .search-container.faded {
+            opacity: 0.7;
+        }
+
         body {
             background: var(--weather-gradient);
             color: var(--weather-on-gradient);
@@ -57,6 +152,7 @@
             overflow-x: hidden;
             position: relative;
             will-change: background;
+            padding-top: 64px; /* Add padding for fixed header */
         }
 
         /* Loading Screen with Grey Background */
@@ -292,14 +388,6 @@
             font-feature-settings: 'ss01' on;
         }
 
-        .title-large {
-            font-size: 22px;
-            font-weight: 400;
-            line-height: 28px;
-            letter-spacing: 0;
-            font-feature-settings: 'ss01' on;
-        }
-
         .title-medium {
             font-size: 16px;
             font-weight: 500;
@@ -332,31 +420,7 @@
             font-feature-settings: 'ss01' on;
         }
 
-        /* Dynamic Text Colors */
-        .on-gradient {
-            color: var(--weather-on-gradient) !important;
-        }
-
-        .on-surface {
-            color: var(--weather-on-surface) !important;
-        }
-
         /* Floating Search Bar */
-        .search-container {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90%;
-            max-width: 400px;
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: all var(--animation-medium) ease;
-            will-change: transform, opacity;
-        }
-
         .search-pill {
             flex: 1;
             background: var(--weather-surface);
@@ -450,18 +514,6 @@
             background: var(--weather-primary);
             color: var(--weather-on-gradient);
             box-shadow: var(--elevation-1);
-        }
-
-        /* Main Container */
-        .container {
-            max-width: 500px;
-            margin: 0 auto;
-            padding: 100px 20px 100px 20px;
-            position: relative;
-            z-index: 10;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
         }
 
         /* Map Tab Styling */
@@ -908,7 +960,7 @@
         /* Responsive */
         @media (max-width: 480px) {
             .container {
-                padding: 100px 16px 100px 16px;
+                padding: 80px 16px 100px 16px;
             }
             
             .temperature {
@@ -942,9 +994,17 @@
             #mapTab {
                 height: calc(100vh - 160px);
             }
+            
+            .app-header {
+                padding: 8px 12px;
+            }
+            
+            .search-container {
+                top: 80px;
+            }
         }
 
-        /* Weather Background Classes */
+        /* Weather Background Classes - Updated for better header integration */
         body.clear-day {
             --weather-primary: #FFB74D;
             --weather-secondary: #42A5F5;
@@ -1011,6 +1071,16 @@
     </style>
 </head>
 <body class="clear-day">
+    <!-- Native Telegram Header -->
+    <header class="app-header" id="mainHeader">
+        <div class="bot-profile">
+            <div class="profile-pic" style="display:flex; align-items:center; justify-content:center; background: var(--weather-primary);">
+                <span class="material-symbols-rounded" style="color: white; font-size: 40px;">cloudy</span>
+            </div>
+            <h1 class="title-large on-gradient" id="headerTitle">WeatherFlow</h1>
+        </div>
+    </header>
+
     <!-- Loading Screen with Wiggly Ring -->
     <div class="loading-screen" id="loadingScreen" style="background: #808080;">
         <div class="canvas-container">
@@ -1120,6 +1190,38 @@
     </div>
 
     <script type="module">
+        // ==================== SMART SCROLL SCRIPT FOR HEADER ====================
+        window.addEventListener('scroll', () => {
+            const header = document.getElementById('mainHeader');
+            const title = document.getElementById('headerTitle');
+            const searchContainer = document.querySelector('.search-container');
+            const scrollPos = window.scrollY;
+
+            if (scrollPos > 120) {
+                header.classList.add('shrunk');
+                title.classList.remove('on-gradient');
+                title.classList.add('on-surface'); // Changes color to match your card text
+                if (scrollPos > 200) {
+                    searchContainer.classList.add('faded');
+                } else {
+                    searchContainer.classList.remove('faded');
+                }
+            } else {
+                header.classList.remove('shrunk');
+                title.classList.add('on-gradient');
+                title.classList.remove('on-surface');
+                searchContainer.classList.remove('faded');
+            }
+        });
+
+        // ==================== TELEGRAM FULLSCREEN MANAGEMENT ====================
+        const webapp = window.Telegram.WebApp;
+        webapp.expand(); // Opens to maximum height
+        webapp.ready();
+
+        // Sync the header color with Telegram's Header Color variable
+        webapp.setHeaderColor('bg_color'); 
+
         // ==================== WIGGLY RING LOADING ANIMATION ====================
         (function() {
             const canvas = document.getElementById('wigglyCanvas');
