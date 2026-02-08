@@ -115,7 +115,7 @@
             overflow: hidden;
         }
 
-        /* Enhanced Sun Element with Triangles */
+        /* Enhanced Sun Element with Static Rays */
         .sun {
             position: absolute;
             width: 100px;
@@ -148,18 +148,19 @@
             position: absolute;
             width: 100%;
             height: 100%;
-            animation: rotate-sun 20s linear infinite;
+            animation: sun-pulse 3s ease-in-out infinite;
         }
 
         .sun-ray {
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 4px;
-            height: 60px;
-            background: linear-gradient(to top, #FF9800, transparent);
+            width: 3px;
+            height: 40px;
+            background: linear-gradient(to top, rgba(255, 152, 0, 0.8), transparent);
             border-radius: 2px;
-            transform-origin: 50% 100px;
+            transform-origin: center 70px;
+            opacity: 0.7;
         }
 
         @keyframes sun-glow {
@@ -167,9 +168,9 @@
             50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.1); }
         }
 
-        @keyframes rotate-sun {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+        @keyframes sun-pulse {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
         }
 
         /* Moon Element */
@@ -185,6 +186,12 @@
                 inset 0 0 20px rgba(255, 255, 255, 0.2);
             transition: all 1s ease;
             will-change: transform, box-shadow, background;
+            animation: moon-pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes moon-pulse {
+            0%, 100% { opacity: 0.7; transform: scale(1); }
+            50% { opacity: 0.9; transform: scale(1.02); }
         }
 
         /* Cloud Element */
@@ -466,12 +473,63 @@
             margin-top: 10px;
             box-shadow: var(--elevation-2);
             background: white;
+            position: relative;
+            transition: all var(--animation-medium) ease;
         }
 
         #weatherMap {
             width: 100%;
             height: 100%;
             border-radius: var(--shape-extra-large);
+        }
+
+        /* Fullscreen map styles */
+        .map-fullscreen {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 10000 !important;
+            border-radius: 0 !important;
+            margin-top: 0 !important;
+        }
+
+        .map-fullscreen .leaflet-control-container {
+            margin-top: 80px;
+        }
+
+        .map-back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 10001;
+            background: var(--weather-surface);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--elevation-3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all var(--animation-medium) ease;
+        }
+
+        .map-back-button:hover {
+            transform: scale(1.1);
+        }
+
+        .map-back-button span {
+            color: var(--weather-primary);
+            font-size: 24px;
+        }
+
+        body.map-mode {
+            overflow: hidden;
         }
 
         /* Custom Marker Styling */
@@ -1219,6 +1277,7 @@
         let markersLayer = null;
         let weatherAnimationInterval = null;
         let activeWeatherAnimations = [];
+        let mapUpdateTimeout = null;
 
         // Initialize the app
         async function initApp() {
@@ -1361,46 +1420,66 @@
             // Create sun or moon based on time of day
             createSunMoon(isDay);
             
-            // Create clouds based on cloud cover (continuous)
+            // Create weather elements based on weather code
             if (weatherCode >= 1 && weatherCode <= 3) {
-                createClouds(cloudCover);
-                // Continuously add new clouds
+                // Clouds - start with a few, then add more slowly
+                createClouds(Math.min(2, Math.floor(cloudCover / 30)));
+                // Continuously add new clouds, but fewer at a time
                 weatherAnimationInterval = setInterval(() => {
-                    createClouds(Math.floor(cloudCover / 20));
-                }, 3000);
+                    // Only add if we have less than 5 clouds
+                    const currentClouds = document.querySelectorAll('.cloud').length;
+                    if (currentClouds < 5) {
+                        createClouds(1);
+                    }
+                }, 4000); // Slower interval for more realistic clouds
             }
             
-            // Create rain or snow based on weather code (continuous)
             if (weatherCode >= 51 && weatherCode <= 65) {
-                createRain();
-                // Continuously add new rain
+                // Rain - start with a few drops, then add slowly
+                createRain(5);
+                // Continuously add new rain drops
                 weatherAnimationInterval = setInterval(() => {
-                    createRain(10); // Add 10 new drops every 500ms
-                }, 500);
-            } else if (weatherCode >= 71 && weatherCode <= 77) {
-                createSnow();
-                // Continuously add new snow
+                    // Keep a consistent number of raindrops (15-25)
+                    const currentRain = document.querySelectorAll('.rain-drop').length;
+                    if (currentRain < 20) {
+                        createRain(2); // Add 2 new drops at a time
+                    }
+                }, 300); // Slower interval for smoother rain
+            }
+            
+            if (weatherCode >= 71 && weatherCode <= 77) {
+                // Snow - start with a few flakes, then add slowly
+                createSnow(3);
+                // Continuously add new snow flakes
                 weatherAnimationInterval = setInterval(() => {
-                    createSnow(5); // Add 5 new flakes every 800ms
+                    // Keep a consistent number of snowflakes (10-15)
+                    const currentSnow = document.querySelectorAll('.snow-flake').length;
+                    if (currentSnow < 12) {
+                        createSnow(1); // Add 1 new flake at a time
+                    }
                 }, 800);
             }
             
-            // Create stars for clear night (continuous)
             if (!isDay && (weatherCode === 0 || weatherCode === 1)) {
-                createStars();
-                // Continuously add new stars
+                // Stars for clear night
+                createStars(10);
+                // Continuously add new stars slowly
                 weatherAnimationInterval = setInterval(() => {
-                    createStars(5); // Add 5 new stars every 2 seconds
+                    // Keep a consistent number of stars (15-20)
+                    const currentStars = document.querySelectorAll('.star').length;
+                    if (currentStars < 18) {
+                        createStars(1); // Add 1 new star at a time
+                    }
                 }, 2000);
             }
             
-            // Create lightning for thunderstorms
             if (weatherCode >= 95 && weatherCode <= 99) {
+                // Lightning for thunderstorms
                 createLightning();
-                // Continuously add lightning
+                // Continuously add lightning but less frequently
                 weatherAnimationInterval = setInterval(() => {
                     createLightning();
-                }, 3000);
+                }, 5000); // Slower for more realistic thunderstorms
             }
         }
 
@@ -1408,17 +1487,18 @@
             const sunMoonContainer = document.createElement('div');
             
             if (isDay) {
-                // Enhanced Sun with rays
+                // Enhanced Sun with static rays
                 sunMoonContainer.innerHTML = `
-                    <div class="sun" style="left: 20%; top: 20%;"></div>
-                    <div class="sun-rays">
-                        ${Array.from({length: 12}, (_, i) => 
-                            `<div class="sun-ray" style="transform: rotate(${i * 30}deg);"></div>`
-                        ).join('')}
+                    <div class="sun" style="left: 20%; top: 20%;">
+                        <div class="sun-rays">
+                            ${Array.from({length: 12}, (_, i) => 
+                                `<div class="sun-ray" style="transform: rotate(${i * 30}deg) translateY(-35px);"></div>`
+                            ).join('')}
+                        </div>
                     </div>
                 `;
             } else {
-                // Moon
+                // Moon with gentle glow
                 const moon = document.createElement('div');
                 moon.className = 'moon';
                 moon.style.left = '80%';
@@ -1435,11 +1515,11 @@
                 cloud.className = 'cloud';
                 
                 // Random size and position
-                const size = 60 + Math.random() * 80;
+                const size = 50 + Math.random() * 60; // Smaller clouds
                 const top = 10 + Math.random() * 40;
-                const left = -size - Math.random() * 100;
-                const opacity = 0.3 + (Math.random() * 0.4);
-                const speed = 20 + Math.random() * 20;
+                const left = -size - Math.random() * 50;
+                const opacity = 0.4 + (Math.random() * 0.3);
+                const speed = 25 + Math.random() * 15; // Slower speed
                 
                 cloud.style.width = `${size}px`;
                 cloud.style.height = `${size * 0.5}px`;
@@ -1455,7 +1535,7 @@
                 
                 elements.weatherElements.appendChild(cloud);
                 
-                // Animate cloud
+                // Animate cloud slowly
                 let startTime = null;
                 function animateCloud(time) {
                     if (!startTime) startTime = time;
@@ -1463,7 +1543,7 @@
                     const progress = elapsed / speed;
                     
                     if (progress <= 1) {
-                        const x = left + (window.innerWidth + size + 100) * progress;
+                        const x = left + (window.innerWidth + size + 50) * progress;
                         cloud.style.transform = `translateX(${x}px)`;
                         const raf = requestAnimationFrame(animateCloud);
                         activeWeatherAnimations.push(raf);
@@ -1477,24 +1557,24 @@
             }
         }
 
-        function createRain(count = 20) {
+        function createRain(count = 2) {
             for (let i = 0; i < count; i++) {
                 const drop = document.createElement('div');
                 drop.className = 'rain-drop';
                 
                 const left = Math.random() * 100;
-                const duration = 0.8 + Math.random() * 0.8; // Faster rain
-                const delay = Math.random() * 0.5;
-                const size = 2 + Math.random() * 2;
+                const duration = 1 + Math.random() * 0.5; // Slightly slower
+                const delay = Math.random() * 0.3;
+                const size = 1.5 + Math.random() * 1.5; // Thinner drops
                 
                 drop.style.left = `${left}%`;
                 drop.style.top = '-30px';
                 drop.style.width = `${size}px`;
-                drop.style.height = `${30 + Math.random() * 20}px`;
+                drop.style.height = `${25 + Math.random() * 15}px`;
                 
                 elements.weatherElements.appendChild(drop);
                 
-                // Animate rain drop
+                // Animate rain drop smoothly
                 let startTime = null;
                 function animateRain(time) {
                     if (!startTime) startTime = time;
@@ -1509,9 +1589,9 @@
                     const progress = (elapsed - delay) / duration;
                     if (progress <= 1) {
                         const y = -30 + (window.innerHeight + 60) * progress;
-                        const x = left + Math.sin(progress * Math.PI * 3) * 15;
+                        const x = left + Math.sin(progress * Math.PI * 2.5) * 10; // Less sway
                         drop.style.transform = `translate(${x}px, ${y}px)`;
-                        drop.style.opacity = 1 - progress * 0.5;
+                        drop.style.opacity = 1 - progress * 0.7;
                         const raf = requestAnimationFrame(animateRain);
                         activeWeatherAnimations.push(raf);
                     } else {
@@ -1524,15 +1604,15 @@
             }
         }
 
-        function createSnow(count = 10) {
+        function createSnow(count = 1) {
             for (let i = 0; i < count; i++) {
                 const flake = document.createElement('div');
                 flake.className = 'snow-flake';
                 
                 const left = Math.random() * 100;
-                const duration = 4 + Math.random() * 3;
-                const delay = Math.random() * 2;
-                const size = 4 + Math.random() * 4;
+                const duration = 5 + Math.random() * 2; // Slower falling
+                const delay = Math.random() * 1.5;
+                const size = 3 + Math.random() * 3;
                 
                 flake.style.left = `${left}%`;
                 flake.style.top = '-10px';
@@ -1555,10 +1635,10 @@
                     const progress = (elapsed - delay) / duration;
                     if (progress <= 1) {
                         const y = -10 + (window.innerHeight + 20) * progress;
-                        const x = left + Math.sin(progress * Math.PI * 2) * 40;
-                        const rotation = progress * 720;
+                        const x = left + Math.sin(progress * Math.PI * 1.5) * 30; // Less horizontal movement
+                        const rotation = progress * 360;
                         flake.style.transform = `translate(${x}px, ${y}px) rotate(${rotation}deg)`;
-                        flake.style.opacity = 1 - progress * 0.3;
+                        flake.style.opacity = 1 - progress * 0.4;
                         const raf = requestAnimationFrame(animateSnow);
                         activeWeatherAnimations.push(raf);
                     } else {
@@ -1632,7 +1712,7 @@
             activeWeatherAnimations = [];
         }
 
-        // ==================== MAP FUNCTIONALITY ====================
+        // ==================== FULLSCREEN MAP FUNCTIONALITY ====================
         async function initWeatherMap() {
             if (!leafletMap) {
                 // Initialize map
@@ -1645,25 +1725,166 @@
                 markersLayer = L.layerGroup().addTo(leafletMap);
                 
                 // Add current location marker
-                addSingleMarker(userLocation.latitude, userLocation.longitude, "Your Location", true);
+                await addSingleMarker(userLocation.latitude, userLocation.longitude, "Your Location", true);
                 
-                // Add nearby cities
+                // Add nearby cities based on initial zoom
                 await addNearbyCities();
+                
+                // Add moveend event listener to update weather data when zooming/panning
+                leafletMap.on('moveend', handleMapMoveEnd);
+                leafletMap.on('zoomend', handleMapMoveEnd);
+            }
+            
+            // Go fullscreen
+            elements.mapTab.classList.add('map-fullscreen');
+            document.body.classList.add('map-mode');
+            
+            // Add back button
+            const backButton = document.createElement('div');
+            backButton.className = 'map-back-button';
+            backButton.innerHTML = '<span class="material-symbols-rounded">arrow_back</span>';
+            backButton.onclick = exitFullscreenMap;
+            document.body.appendChild(backButton);
+            
+            // Invalidate map size for proper display
+            setTimeout(() => {
+                leafletMap.invalidateSize();
+                // Center on user location when entering fullscreen
+                leafletMap.setView([userLocation.latitude, userLocation.longitude], leafletMap.getZoom());
+            }, 100);
+        }
+
+        async function handleMapMoveEnd() {
+            // Clear any existing timeout
+            if (mapUpdateTimeout) {
+                clearTimeout(mapUpdateTimeout);
+            }
+            
+            // Debounce the update to avoid too many API calls
+            mapUpdateTimeout = setTimeout(async () => {
+                updateLoadingText('Updating map data...');
+                
+                // Clear existing markers except user location
+                markersLayer.clearLayers();
+                
+                // Add current location marker
+                await addSingleMarker(userLocation.latitude, userLocation.longitude, "Your Location", true);
+                
+                // Get current map bounds and center
+                const bounds = leafletMap.getBounds();
+                const center = leafletMap.getCenter();
+                const zoom = leafletMap.getZoom();
+                
+                // Add cities around the current view
+                await addCitiesInView(bounds, center, zoom);
+                
+                updateLoadingText('');
+            }, 500);
+        }
+
+        async function addCitiesInView(bounds, center, zoom) {
+            // Determine how many cities to show based on zoom level
+            let cityCount;
+            if (zoom < 6) {
+                cityCount = 12; // Very zoomed out - show many cities
+            } else if (zoom < 8) {
+                cityCount = 8;  // Medium zoom
             } else {
-                leafletMap.invalidateSize(); // Fixes map display issues
+                cityCount = 4;  // Zoomed in - show fewer cities
+            }
+            
+            // Calculate grid for cities based on bounds
+            const latDiff = bounds.getNorth() - bounds.getSouth();
+            const lngDiff = bounds.getEast() - bounds.getWest();
+            
+            // Create a grid of points within the view
+            const gridSize = Math.ceil(Math.sqrt(cityCount));
+            const latStep = latDiff / (gridSize + 1);
+            const lngStep = lngDiff / (gridSize + 1);
+            
+            const cities = [];
+            
+            // Generate grid points
+            for (let i = 1; i <= gridSize; i++) {
+                for (let j = 1; j <= gridSize; j++) {
+                    if (cities.length >= cityCount) break;
+                    
+                    const lat = bounds.getSouth() + (latStep * i);
+                    const lng = bounds.getWest() + (lngStep * j);
+                    
+                    // Only add if within bounds and not too close to user location
+                    if (bounds.contains([lat, lng])) {
+                        const distance = Math.sqrt(
+                            Math.pow(lat - userLocation.latitude, 2) + 
+                            Math.pow(lng - userLocation.longitude, 2)
+                        );
+                        
+                        if (distance > 0.1) { // At least 0.1 degrees away
+                            cities.push({
+                                lat: lat,
+                                lon: lng,
+                                name: `Location ${cities.length + 1}`
+                            });
+                        }
+                    }
+                }
+            }
+            
+            // Also add points at the bounds corners and center
+            const additionalPoints = [
+                { lat: bounds.getNorth() - 0.1, lon: bounds.getEast() - 0.1, name: 'NE Area' },
+                { lat: bounds.getNorth() - 0.1, lon: bounds.getWest() + 0.1, name: 'NW Area' },
+                { lat: bounds.getSouth() + 0.1, lon: bounds.getEast() - 0.1, name: 'SE Area' },
+                { lat: bounds.getSouth() + 0.1, lon: bounds.getWest() + 0.1, name: 'SW Area' }
+            ];
+            
+            // Add up to count cities
+            const allPoints = [...additionalPoints, ...cities].slice(0, cityCount);
+            
+            // Process cities with delay to avoid rate limiting
+            for (const [index, city] of allPoints.entries()) {
+                await new Promise(resolve => setTimeout(resolve, index * 100)); // Delay between requests
+                await addSingleMarker(city.lat, city.lon, city.name, false);
             }
         }
 
         async function addNearbyCities() {
-            // Add nearby major cities (hardcoded for demo)
-            const nearbyCities = [
-                { lat: userLocation.latitude + 0.5, lon: userLocation.longitude + 0.5, name: "North East" },
-                { lat: userLocation.latitude - 0.5, lon: userLocation.longitude - 0.3, name: "South West" },
-                { lat: userLocation.latitude + 0.3, lon: userLocation.longitude - 0.5, name: "South East" },
-                { lat: userLocation.latitude - 0.3, lon: userLocation.longitude + 0.5, name: "North West" }
-            ];
+            // Get major cities around the current location based on zoom level
+            const zoom = leafletMap ? leafletMap.getZoom() : 8;
+            let cities;
+            
+            if (zoom < 6) {
+                // National/regional level - show major cities
+                cities = [
+                    { lat: userLocation.latitude + 1.5, lon: userLocation.longitude + 1.5, name: "Major City 1" },
+                    { lat: userLocation.latitude + 1.5, lon: userLocation.longitude - 1.5, name: "Major City 2" },
+                    { lat: userLocation.latitude - 1.5, lon: userLocation.longitude + 1.5, name: "Major City 3" },
+                    { lat: userLocation.latitude - 1.5, lon: userLocation.longitude - 1.5, name: "Major City 4" },
+                    { lat: userLocation.latitude, lon: userLocation.longitude + 2, name: "Major City 5" },
+                    { lat: userLocation.latitude, lon: userLocation.longitude - 2, name: "Major City 6" },
+                    { lat: userLocation.latitude + 2, lon: userLocation.longitude, name: "Major City 7" },
+                    { lat: userLocation.latitude - 2, lon: userLocation.longitude, name: "Major City 8" }
+                ];
+            } else if (zoom < 8) {
+                // Regional level - show medium cities
+                cities = [
+                    { lat: userLocation.latitude + 0.8, lon: userLocation.longitude + 0.8, name: "City 1" },
+                    { lat: userLocation.latitude + 0.8, lon: userLocation.longitude - 0.8, name: "City 2" },
+                    { lat: userLocation.latitude - 0.8, lon: userLocation.longitude + 0.8, name: "City 3" },
+                    { lat: userLocation.latitude - 0.8, lon: userLocation.longitude - 0.8, name: "City 4" }
+                ];
+            } else {
+                // Local level - show nearby towns
+                cities = [
+                    { lat: userLocation.latitude + 0.3, lon: userLocation.longitude + 0.3, name: "Nearby Town 1" },
+                    { lat: userLocation.latitude - 0.3, lon: userLocation.longitude - 0.3, name: "Nearby Town 2" },
+                    { lat: userLocation.latitude + 0.3, lon: userLocation.longitude - 0.3, name: "Nearby Town 3" },
+                    { lat: userLocation.latitude - 0.3, lon: userLocation.longitude + 0.3, name: "Nearby Town 4" }
+                ];
+            }
 
-            for (const city of nearbyCities) {
+            for (const [index, city] of cities.entries()) {
+                await new Promise(resolve => setTimeout(resolve, index * 100));
                 await addSingleMarker(city.lat, city.lon, city.name, false);
             }
         }
@@ -1679,26 +1900,36 @@
                     const isDay = data.current_weather.is_day === 1;
                     const iconName = getWeatherIconName(code, isDay);
                     const temp = Math.round(data.current_weather.temperature);
+                    const windSpeed = Math.round(data.current_weather.windspeed);
 
-                    // Create a custom DivIcon
+                    // Create a custom DivIcon with weather info
                     const customIcon = L.divIcon({
                         html: `
-                            <div class="weather-marker" style="border-color: ${isCurrentLocation ? '#FF5722' : 'var(--weather-primary)'}">
-                                <span class="material-symbols-rounded">${iconName}</span>
+                            <div class="weather-marker" style="border-color: ${isCurrentLocation ? '#FF5722' : 'var(--weather-primary)'}; width: 60px; height: 60px; flex-direction: column; padding: 5px;">
+                                <span class="material-symbols-rounded" style="font-size: 24px; color: ${isCurrentLocation ? '#FF5722' : 'var(--weather-primary)'}">${iconName}</span>
+                                <div style="font-size: 12px; font-weight: 600; color: ${isCurrentLocation ? '#FF5722' : 'var(--weather-primary)'}; margin-top: 2px;">${temp}°</div>
+                                <div style="font-size: 9px; color: #666;">${windSpeed}km/h</div>
                             </div>
                         `,
                         className: '',
-                        iconSize: [36, 36],
-                        iconAnchor: [18, 18]
+                        iconSize: [60, 60],
+                        iconAnchor: [30, 30]
                     });
 
                     const marker = L.marker([lat, lon], { icon: customIcon }).addTo(markersLayer);
                     
                     const popupContent = `
-                        <div style="font-family: 'Inter', sans-serif;">
-                            <b style="color: ${isCurrentLocation ? '#FF5722' : 'var(--weather-primary)'}">${name}</b><br>
-                            <span style="font-size: 16px; font-weight: 600;">${temp}°C</span><br>
-                            <span style="font-size: 12px; color: #666;">${getWeatherDescription(code)}</span>
+                        <div style="font-family: 'Inter', sans-serif; min-width: 150px;">
+                            <b style="color: ${isCurrentLocation ? '#FF5722' : 'var(--weather-primary)'}; font-size: 14px;">${name}</b><br>
+                            <div style="display: flex; align-items: center; gap: 8px; margin: 8px 0;">
+                                <span class="material-symbols-rounded" style="color: ${isCurrentLocation ? '#FF5722' : 'var(--weather-primary)'}; font-size: 20px;">${iconName}</span>
+                                <span style="font-size: 24px; font-weight: 600;">${temp}°C</span>
+                            </div>
+                            <div style="font-size: 12px; color: #666; margin: 4px 0;">${getWeatherDescription(code)}</div>
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 8px;">
+                                <span>💨 ${windSpeed} km/h</span>
+                                <span>🌡️ Feels like ${temp}°</span>
+                            </div>
                         </div>
                     `;
                     
@@ -1709,13 +1940,38 @@
                         if (!isCurrentLocation) {
                             userLocation = { latitude: lat, longitude: lon };
                             loadAllWeatherData();
-                            // Switch back to current tab
+                            // Exit fullscreen and go back to current tab
+                            exitFullscreenMap();
                             document.querySelector('.switch-option[data-view="current"]').click();
                         }
                     });
                 }
             } catch (error) {
                 console.error('Failed to add marker:', error);
+            }
+        }
+
+        function exitFullscreenMap() {
+            // Remove fullscreen class
+            elements.mapTab.classList.remove('map-fullscreen');
+            document.body.classList.remove('map-mode');
+            
+            // Remove back button
+            const backButton = document.querySelector('.map-back-button');
+            if (backButton) {
+                backButton.remove();
+            }
+            
+            // Reset map view to original location
+            if (leafletMap && userLocation) {
+                leafletMap.setView([userLocation.latitude, userLocation.longitude], 8);
+            }
+            
+            // Invalidate size for proper display
+            if (leafletMap) {
+                setTimeout(() => {
+                    leafletMap.invalidateSize();
+                }, 100);
             }
         }
 
@@ -2061,6 +2317,11 @@
                 option.addEventListener('click', () => {
                     const view = option.dataset.view;
                     
+                    // Exit fullscreen if we're in map mode and switching away
+                    if (document.body.classList.contains('map-mode') && view !== 'map') {
+                        exitFullscreenMap();
+                    }
+                    
                     // UI Updates
                     switchOptions.forEach(o => o.classList.remove('active'));
                     option.classList.add('active');
@@ -2069,7 +2330,9 @@
 
                     // Logic Updates
                     if (view === 'map') {
-                        setTimeout(initWeatherMap, 100); // Small delay for CSS transitions
+                        setTimeout(() => {
+                            initWeatherMap();
+                        }, 100);
                     }
                 });
             });
@@ -2111,6 +2374,14 @@
                     
                     // Load weather data
                     await loadAllWeatherData();
+                    
+                    // Update map if it exists
+                    if (leafletMap) {
+                        leafletMap.setView([location.latitude, location.longitude], 8);
+                        markersLayer.clearLayers();
+                        await addSingleMarker(location.latitude, location.longitude, "Your Location", true);
+                        await addNearbyCities();
+                    }
                 } else {
                     showError('Location not found');
                 }
