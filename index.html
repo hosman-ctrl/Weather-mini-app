@@ -57,6 +57,21 @@
             overflow-x: hidden;
             position: relative;
             will-change: background;
+            /* One UI Style - content starts lower */
+            padding-top: 0;
+        }
+
+        /* One UI Style Container Drop */
+        .app-wrapper {
+            position: relative;
+            min-height: 100vh;
+            /* Creates the drop effect */
+            transform: translateY(0);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .app-wrapper.dropped {
+            transform: translateY(0);
         }
 
         /* Loading Screen with Grey Background */
@@ -85,9 +100,28 @@
             animation: text-pulse 2s ease-in-out infinite;
         }
 
+        /* Hosman Apps Text */
+        .hosman-apps {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 400;
+            color: rgba(255, 255, 255, 0.7);
+            letter-spacing: 0.5px;
+            animation: fade-in 1s ease;
+        }
+
         @keyframes text-pulse {
             0%, 100% { opacity: 0.7; }
             50% { opacity: 1; }
+        }
+
+        @keyframes fade-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         /* Canvas Container - Fixed 2cm size */
@@ -341,87 +375,158 @@
             color: var(--weather-on-surface) !important;
         }
 
-        /* Retractable Search Bar */
-        .search-container {
+        /* One UI Style Search Icon */
+        .search-icon-button {
             position: fixed;
             top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1500;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .search-pill {
-            width: 2cm;
-            background: var(--weather-surface);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: 100px;
-            padding: 8px 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: var(--elevation-2);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow: hidden;
-        }
-
-        .search-pill.expanded {
-            width: 250px;
-        }
-
-        .search-input {
-            flex: 1;
-            border: none;
-            background: transparent;
-            font-size: 14px;
-            font-weight: 400;
-            color: var(--weather-on-surface);
-            outline: none;
-            font-family: inherit;
-            width: 0;
-            opacity: 0;
-            transition: width 0.3s ease, opacity 0.3s ease;
-        }
-
-        .search-pill.expanded .search-input {
-            width: 100%;
-            opacity: 1;
-        }
-
-        .search-input::placeholder {
-            color: rgba(28, 27, 31, 0.6);
-        }
-
-        .search-icon {
-            color: var(--weather-primary);
-            font-size: 18px;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .search-button {
-            width: 36px;
-            height: 36px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
-            background: var(--weather-primary);
+            background: var(--weather-surface);
             border: none;
             display: flex;
             align-items: center;
             justify-content: center;
             box-shadow: var(--elevation-2);
             cursor: pointer;
-            transition: all 0.3s ease;
-            flex-shrink: 0;
-            will-change: transform;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1500;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        .search-button:hover {
-            transform: scale(1.05);
+        .search-icon-button:hover {
+            transform: scale(1.1);
+        }
+
+        .search-icon-button span {
+            color: var(--weather-primary);
+            font-size: 22px;
+        }
+
+        /* Full Search Overlay */
+        .search-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--weather-gradient);
+            z-index: 2000;
+            display: none;
+            flex-direction: column;
+            animation: slide-down 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slide-down {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .search-overlay.active {
+            display: flex;
+        }
+
+        .search-overlay-header {
+            padding: calc(20px + env(safe-area-inset-top)) 20px 20px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .search-overlay-input-container {
+            flex: 1;
+            background: var(--weather-surface);
+            border-radius: 100px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .search-overlay-input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-size: 16px;
+            font-weight: 400;
+            color: var(--weather-on-surface);
+            outline: none;
+            font-family: inherit;
+        }
+
+        .search-overlay-input::placeholder {
+            color: rgba(28, 27, 31, 0.6);
+        }
+
+        .search-overlay-close {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--weather-surface);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .search-overlay-close:hover {
+            transform: scale(1.1);
+        }
+
+        .search-overlay-close span {
+            color: var(--weather-primary);
+            font-size: 22px;
+        }
+
+        .search-results {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .search-result-item {
+            padding: 16px;
+            background: var(--weather-surface);
+            border-radius: var(--shape-large);
+            margin-bottom: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .search-result-item:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.98);
+        }
+
+        .search-result-name {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--weather-on-surface);
+            margin-bottom: 4px;
+        }
+
+        .search-result-details {
+            font-size: 12px;
+            color: rgba(28, 27, 31, 0.6);
+            display: flex;
+            gap: 8px;
         }
 
         /* Bottom Switch Pill */
@@ -468,7 +573,7 @@
         .container {
             max-width: 500px;
             margin: 0 auto;
-            padding: 80px 20px 100px 20px;
+            padding: 120px 20px 100px 20px; /* More top padding for One UI effect */
             position: relative;
             z-index: 10;
             min-height: 100vh;
@@ -787,7 +892,7 @@
             margin: 8px 0;
         }
 
-        /* History Tab - Improved */
+        /* History Tab - Enhanced */
         .history-controls {
             background: var(--weather-surface);
             border-radius: var(--shape-extra-large);
@@ -998,7 +1103,7 @@
         /* Responsive */
         @media (max-width: 480px) {
             .container {
-                padding: 80px 16px 100px 16px;
+                padding: 100px 16px 100px 16px;
             }
             
             .temperature {
@@ -1025,8 +1130,15 @@
                 font-size: 13px;
             }
             
-            .search-pill.expanded {
-                width: 200px;
+            .search-icon-button {
+                top: 15px;
+                right: 15px;
+                width: 40px;
+                height: 40px;
+            }
+            
+            .search-icon-button span {
+                font-size: 20px;
             }
             
             #mapTab {
@@ -1118,114 +1230,128 @@
     </style>
 </head>
 <body class="clear-day">
-    <!-- Loading Screen with Wiggly Ring -->
-    <div class="loading-screen" id="loadingScreen" style="background: #808080;">
-        <div class="canvas-container">
-            <canvas id="wigglyCanvas"></canvas>
+    <!-- App Wrapper for One UI Drop Effect -->
+    <div class="app-wrapper" id="appWrapper">
+        <!-- Loading Screen with Wiggly Ring -->
+        <div class="loading-screen" id="loadingScreen" style="background: #808080;">
+            <div class="canvas-container">
+                <canvas id="wigglyCanvas"></canvas>
+            </div>
+            <div class="loading-text" id="loadingText">Detecting your location...</div>
+            <div class="hosman-apps">hosman apps</div>
         </div>
-        <div class="loading-text" id="loadingText">Detecting your location...</div>
-    </div>
 
-    <!-- Weather Elements Container -->
-    <div class="weather-elements" id="weatherElements"></div>
+        <!-- Weather Elements Container -->
+        <div class="weather-elements" id="weatherElements"></div>
 
-    <!-- Retractable Search Bar -->
-    <div class="search-container">
-        <div class="search-pill" id="searchPill">
-            <span class="material-symbols-rounded search-icon" id="searchIcon">search</span>
-            <input type="text" class="search-input" id="searchInput" placeholder="Search location">
-        </div>
-        <button class="search-button" id="searchButton">
-            <span class="material-symbols-rounded">arrow_forward</span>
+        <!-- One UI Style Search Icon -->
+        <button class="search-icon-button" id="searchIconButton">
+            <span class="material-symbols-rounded">search</span>
         </button>
-    </div>
 
-    <!-- Main App Content -->
-    <div class="container" id="appContainer" style="display: none;">
-        <!-- Location Section -->
-        <div class="location-section">
-            <div class="location-header">
-                <span class="material-symbols-rounded weather-icon-small">location_on</span>
-                <h1 class="headline-medium on-gradient" id="locationName">Loading...</h1>
+        <!-- Full Search Overlay -->
+        <div class="search-overlay" id="searchOverlay">
+            <div class="search-overlay-header">
+                <div class="search-overlay-input-container">
+                    <span class="material-symbols-rounded" style="color: var(--weather-primary);">search</span>
+                    <input type="text" class="search-overlay-input" id="searchOverlayInput" placeholder="Search location..." autocomplete="off">
+                </div>
+                <button class="search-overlay-close" id="searchOverlayClose">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
             </div>
-            <div class="location-details on-gradient">
-                <span id="elevation">-- m</span>
-                <span>•</span>
-                <span id="timezone">--</span>
+            <div class="search-results" id="searchResults">
+                <!-- Search results will be populated here -->
             </div>
         </div>
 
-        <!-- Current Weather Card -->
-        <div class="weather-card" id="currentWeather">
-            <div class="weather-main">
-                <div class="temperature-section">
-                    <div class="temperature on-surface">
-                        <span id="currentTemp">--</span>
-                        <span class="temp-unit on-surface">°C</span>
+        <!-- Main App Content -->
+        <div class="container" id="appContainer" style="display: none;">
+            <!-- Location Section -->
+            <div class="location-section">
+                <div class="location-header">
+                    <span class="material-symbols-rounded weather-icon-small">location_on</span>
+                    <h1 class="headline-medium on-gradient" id="locationName">Loading...</h1>
+                </div>
+                <div class="location-details on-gradient">
+                    <span id="elevation">-- m</span>
+                    <span>•</span>
+                    <span id="timezone">--</span>
+                </div>
+            </div>
+
+            <!-- Current Weather Card -->
+            <div class="weather-card" id="currentWeather">
+                <div class="weather-main">
+                    <div class="temperature-section">
+                        <div class="temperature on-surface">
+                            <span id="currentTemp">--</span>
+                            <span class="temp-unit on-surface">°C</span>
+                        </div>
+                        <div class="weather-description on-surface" id="weatherDescription">Loading...</div>
                     </div>
-                    <div class="weather-description on-surface" id="weatherDescription">Loading...</div>
+                    <span class="material-symbols-rounded weather-icon" id="weatherIcon">
+                        sunny
+                    </span>
                 </div>
-                <span class="material-symbols-rounded weather-icon" id="weatherIcon">
-                    sunny
-                </span>
+                <div class="weather-grid" id="weatherGrid">
+                    <!-- Weather items will be populated dynamically -->
+                </div>
             </div>
-            <div class="weather-grid" id="weatherGrid">
-                <!-- Weather items will be populated dynamically -->
-            </div>
-        </div>
 
-        <!-- Tab Contents -->
-        <div class="tab-content active" id="currentTab">
-            <div class="hourly-forecast" id="hourlyForecast">
-                <!-- Hourly forecast items will be added here -->
-            </div>
-            <div class="modules-grid">
-                <div class="module-card" id="uvModule">
-                    <span class="material-symbols-rounded module-icon">light_mode</span>
-                    <div class="module-title on-surface">UV Index</div>
-                    <div class="module-value on-surface" id="uvIndexValue">--</div>
-                    <div class="module-unit on-surface" id="uvDescription">Current level</div>
+            <!-- Tab Contents -->
+            <div class="tab-content active" id="currentTab">
+                <div class="hourly-forecast" id="hourlyForecast">
+                    <!-- Hourly forecast items will be added here -->
                 </div>
-                <div class="module-card" id="windModule">
-                    <span class="material-symbols-rounded module-icon">air</span>
-                    <div class="module-title on-surface">Wind Gust</div>
-                    <div class="module-value on-surface" id="windGustValue">--</div>
-                    <div class="module-unit on-surface">km/h</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Map Tab -->
-        <div class="tab-content" id="mapTab">
-            <div id="weatherMap"></div>
-        </div>
-
-        <!-- History Tab -->
-        <div class="tab-content" id="historyTab">
-            <div class="history-controls">
-                <div class="date-picker-container">
-                    <input type="date" class="date-input" id="historyDate" max="">
-                    <button class="history-button" onclick="loadHistoricalWeather()">
-                        <span class="material-symbols-rounded">calendar_month</span>
-                        Load Historical Data
-                    </button>
-                </div>
-                <div id="historicalData">
-                    <div style="text-align: center; padding: 40px;">
-                        <span class="material-symbols-rounded" style="font-size: 48px; color: var(--weather-primary); margin-bottom: 16px;">history</span>
-                        <div class="body-medium on-surface">Select a date to view historical weather data</div>
-                        <div class="body-small on-surface" style="margin-top: 8px; opacity: 0.7;">Data available for the past 1 year</div>
+                <div class="modules-grid">
+                    <div class="module-card" id="uvModule">
+                        <span class="material-symbols-rounded module-icon">light_mode</span>
+                        <div class="module-title on-surface">UV Index</div>
+                        <div class="module-value on-surface" id="uvIndexValue">--</div>
+                        <div class="module-unit on-surface" id="uvDescription">Current level</div>
+                    </div>
+                    <div class="module-card" id="windModule">
+                        <span class="material-symbols-rounded module-icon">air</span>
+                        <div class="module-title on-surface">Wind Gust</div>
+                        <div class="module-value on-surface" id="windGustValue">--</div>
+                        <div class="module-unit on-surface">km/h</div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Bottom Switch Pill -->
-    <div class="bottom-switch">
-        <button class="switch-option active" data-view="current">Current</button>
-        <button class="switch-option" data-view="map">Maps</button>
-        <button class="switch-option" data-view="history">History</button>
+            <!-- Map Tab -->
+            <div class="tab-content" id="mapTab">
+                <div id="weatherMap"></div>
+            </div>
+
+            <!-- History Tab -->
+            <div class="tab-content" id="historyTab">
+                <div class="history-controls">
+                    <div class="date-picker-container">
+                        <input type="date" class="date-input" id="historyDate" max="" min="1980-01-01">
+                        <button class="history-button" onclick="loadHistoricalWeather()">
+                            <span class="material-symbols-rounded">calendar_month</span>
+                            Load Historical Data
+                        </button>
+                    </div>
+                    <div id="historicalData">
+                        <div style="text-align: center; padding: 40px;">
+                            <span class="material-symbols-rounded" style="font-size: 48px; color: var(--weather-primary); margin-bottom: 16px;">history</span>
+                            <div class="body-medium on-surface">Select a date to view historical weather data</div>
+                            <div class="body-small on-surface" style="margin-top: 8px; opacity: 0.7;">Data available from 1980 to present</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Switch Pill -->
+        <div class="bottom-switch">
+            <button class="switch-option active" data-view="current">Current</button>
+            <button class="switch-option" data-view="map">Maps</button>
+            <button class="switch-option" data-view="history">History</button>
+        </div>
     </div>
 
     <script type="module">
@@ -1336,11 +1462,13 @@
             loadingScreen: document.getElementById('loadingScreen'),
             loadingText: document.getElementById('loadingText'),
             appContainer: document.getElementById('appContainer'),
+            appWrapper: document.getElementById('appWrapper'),
             weatherElements: document.getElementById('weatherElements'),
-            searchPill: document.getElementById('searchPill'),
-            searchInput: document.getElementById('searchInput'),
-            searchIcon: document.getElementById('searchIcon'),
-            searchButton: document.getElementById('searchButton'),
+            searchIconButton: document.getElementById('searchIconButton'),
+            searchOverlay: document.getElementById('searchOverlay'),
+            searchOverlayInput: document.getElementById('searchOverlayInput'),
+            searchOverlayClose: document.getElementById('searchOverlayClose'),
+            searchResults: document.getElementById('searchResults'),
             locationName: document.getElementById('locationName'),
             elevation: document.getElementById('elevation'),
             timezone: document.getElementById('timezone'),
@@ -1368,9 +1496,31 @@
         let weatherAnimationInterval = null;
         let activeWeatherAnimations = [];
         let mapUpdateTimeout = null;
-        let searchTimeout = null;
-        let searchCollapseTimeout = null;
         let webApp = null;
+        let lastWeatherPrimaryColor = null;
+
+        // ==================== ONE UI DROP EFFECT ====================
+        function applyOneUIDropEffect() {
+            // Apply drop effect on app wrapper
+            elements.appWrapper.classList.add('dropped');
+            
+            // Add scroll event listener for One UI like scrolling
+            let lastScrollTop = 0;
+            const scrollThreshold = 50;
+            
+            window.addEventListener('scroll', () => {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                
+                // Slight parallax effect on weather elements
+                const weatherElements = document.querySelector('.weather-elements');
+                if (weatherElements) {
+                    const parallaxOffset = scrollTop * 0.1;
+                    weatherElements.style.transform = `translateY(${parallaxOffset}px)`;
+                }
+                
+                lastScrollTop = scrollTop;
+            }, { passive: true });
+        }
 
         // ==================== TELEGRAM WEB APP INTEGRATION ====================
         function initTelegramWebApp() {
@@ -1379,112 +1529,235 @@
                 webApp.expand();
                 webApp.ready();
                 
-                // Set Telegram header color to match weather theme
+                // Set initial Telegram header color
                 updateTelegramHeaderColor();
                 
                 // Listen for theme changes
                 webApp.onEvent('themeChanged', updateTelegramHeaderColor);
                 webApp.onEvent('viewportChanged', updateTelegramHeaderColor);
+                
+                console.log('Telegram Web App initialized');
+            } else {
+                console.warn('Telegram Web App not available');
             }
         }
 
         function updateTelegramHeaderColor() {
-            if (!webApp) return;
-            
-            // Get computed style to get current weather primary color
-            const computedStyle = getComputedStyle(document.documentElement);
-            const weatherPrimary = computedStyle.getPropertyValue('--weather-primary').trim();
-            
-            // Convert hex color to RGB for Telegram
-            let color;
-            if (weatherPrimary.startsWith('#')) {
-                const hex = weatherPrimary.substring(1);
-                const r = parseInt(hex.substring(0, 2), 16);
-                const g = parseInt(hex.substring(2, 4), 16);
-                const b = parseInt(hex.substring(4, 6), 16);
-                color = `rgb(${r}, ${g}, ${b})`;
-            } else if (weatherPrimary.startsWith('rgb')) {
-                color = weatherPrimary;
-            } else {
-                color = '#6750A4'; // Default
+            if (!webApp) {
+                console.log('Telegram Web App not available for header color update');
+                return;
             }
             
-            // Set header and background colors
-            webApp.setHeaderColor(color);
-            webApp.setBackgroundColor(color);
-            
-            // Set secondary color if available
-            const weatherSecondary = computedStyle.getPropertyValue('--weather-secondary').trim();
-            if (weatherSecondary && weatherSecondary !== weatherPrimary) {
-                try {
-                    webApp.setSecondaryBackgroundColor(weatherSecondary);
-                } catch (e) {
-                    console.log('Secondary color not supported in this version');
+            try {
+                // Get computed style to get current weather primary color
+                const computedStyle = getComputedStyle(document.documentElement);
+                const weatherPrimary = computedStyle.getPropertyValue('--weather-primary').trim();
+                
+                // Only update if color has changed
+                if (weatherPrimary === lastWeatherPrimaryColor) {
+                    return;
                 }
+                
+                lastWeatherPrimaryColor = weatherPrimary;
+                
+                console.log('Updating Telegram header color to:', weatherPrimary);
+                
+                // Convert hex color to RGB for Telegram
+                let color;
+                if (weatherPrimary.startsWith('#')) {
+                    const hex = weatherPrimary.substring(1);
+                    const r = parseInt(hex.substring(0, 2), 16);
+                    const g = parseInt(hex.substring(2, 4), 16);
+                    const b = parseInt(hex.substring(4, 6), 16);
+                    color = `#${hex}`; // Keep as hex for Telegram
+                } else if (weatherPrimary.startsWith('rgb')) {
+                    color = weatherPrimary;
+                } else {
+                    color = '#6750A4'; // Default
+                }
+                
+                // Set header color
+                webApp.setHeaderColor(color);
+                console.log('Telegram header color set to:', color);
+                
+                // Try to set background color too
+                try {
+                    webApp.setBackgroundColor(color);
+                    console.log('Telegram background color set to:', color);
+                } catch (e) {
+                    console.log('Background color not supported:', e.message);
+                }
+                
+            } catch (error) {
+                console.error('Error updating Telegram header color:', error);
             }
         }
 
-        // ==================== RETRACTABLE SEARCH BAR ====================
-        function initSearchBar() {
-            let isExpanded = false;
-            let lastInteractionTime = Date.now();
+        // ==================== ONE UI SEARCH FUNCTIONALITY ====================
+        function initSearchFunctionality() {
+            let searchDebounceTimeout = null;
+            let currentSearchQuery = '';
             
-            // Toggle search bar on icon click
-            elements.searchIcon.addEventListener('click', () => {
-                expandSearchBar();
+            // Open search overlay
+            elements.searchIconButton.addEventListener('click', () => {
+                elements.searchOverlay.classList.add('active');
+                elements.searchOverlayInput.focus();
+                updateSearchOverlayTheme();
             });
             
-            // Handle search button click
-            elements.searchButton.addEventListener('click', handleSearch);
+            // Close search overlay
+            elements.searchOverlayClose.addEventListener('click', () => {
+                closeSearchOverlay();
+            });
             
-            // Handle Enter key in search input
-            elements.searchInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    handleSearch();
+            // Close on escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && elements.searchOverlay.classList.contains('active')) {
+                    closeSearchOverlay();
                 }
             });
             
-            // Reset timer on user interaction
-            elements.searchInput.addEventListener('input', resetSearchTimer);
-            elements.searchInput.addEventListener('focus', resetSearchTimer);
-            elements.searchButton.addEventListener('click', resetSearchTimer);
-            elements.searchIcon.addEventListener('click', resetSearchTimer);
+            // Search input handler with debounce
+            elements.searchOverlayInput.addEventListener('input', (e) => {
+                currentSearchQuery = e.target.value.trim();
+                
+                clearTimeout(searchDebounceTimeout);
+                
+                if (currentSearchQuery.length === 0) {
+                    clearSearchResults();
+                    return;
+                }
+                
+                if (currentSearchQuery.length < 2) {
+                    showSearchMessage('Type at least 2 characters to search');
+                    return;
+                }
+                
+                searchDebounceTimeout = setTimeout(() => {
+                    performLocationSearch(currentSearchQuery);
+                }, 300);
+            });
             
-            function expandSearchBar() {
-                elements.searchPill.classList.add('expanded');
-                elements.searchInput.focus();
-                isExpanded = true;
-                resetSearchTimer();
-            }
-            
-            function collapseSearchBar() {
-                elements.searchPill.classList.remove('expanded');
-                elements.searchInput.value = '';
-                elements.searchInput.blur();
-                isExpanded = false;
-            }
-            
-            function resetSearchTimer() {
-                lastInteractionTime = Date.now();
-                clearTimeout(searchCollapseTimeout);
-                searchCollapseTimeout = setTimeout(() => {
-                    if (isExpanded && Date.now() - lastInteractionTime >= 15000) {
-                        collapseSearchBar();
-                    }
-                }, 15000);
-            }
-            
-            // Auto-collapse after 15 seconds
-            resetSearchTimer();
-            
-            // Also collapse when clicking outside
-            document.addEventListener('click', (e) => {
-                if (isExpanded && 
-                    !elements.searchPill.contains(e.target) && 
-                    !elements.searchButton.contains(e.target)) {
-                    collapseSearchBar();
+            // Handle Enter key
+            elements.searchOverlayInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && currentSearchQuery.length >= 2) {
+                    performLocationSearch(currentSearchQuery);
                 }
             });
+        }
+        
+        function closeSearchOverlay() {
+            elements.searchOverlay.classList.remove('active');
+            elements.searchOverlayInput.value = '';
+            clearSearchResults();
+            elements.searchOverlayInput.blur();
+        }
+        
+        function updateSearchOverlayTheme() {
+            // Update search overlay with current theme colors
+            const computedStyle = getComputedStyle(document.documentElement);
+            const weatherPrimary = computedStyle.getPropertyValue('--weather-primary').trim();
+            const weatherGradient = computedStyle.getPropertyValue('--weather-gradient').trim();
+            
+            elements.searchOverlay.style.background = weatherGradient;
+            
+            // Update all search icons
+            const searchIcons = elements.searchOverlay.querySelectorAll('.material-symbols-rounded');
+            searchIcons.forEach(icon => {
+                if (icon.textContent === 'search') {
+                    icon.style.color = weatherPrimary;
+                }
+            });
+        }
+        
+        function clearSearchResults() {
+            elements.searchResults.innerHTML = '';
+        }
+        
+        function showSearchMessage(message) {
+            elements.searchResults.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: var(--weather-on-gradient);">
+                    <span class="material-symbols-rounded" style="font-size: 48px; opacity: 0.5;">info</span>
+                    <div style="margin-top: 16px; opacity: 0.8;">${message}</div>
+                </div>
+            `;
+        }
+        
+        async function performLocationSearch(query) {
+            showSearchMessage('Searching...');
+            
+            try {
+                const geocodeUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=10&language=en&format=json`;
+                const response = await fetch(geocodeUrl);
+                const data = await response.json();
+                
+                if (data.results && data.results.length > 0) {
+                    displaySearchResults(data.results);
+                } else {
+                    showSearchMessage('No locations found');
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                showSearchMessage('Search failed. Please try again.');
+            }
+        }
+        
+        function displaySearchResults(results) {
+            elements.searchResults.innerHTML = '';
+            
+            results.forEach(result => {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'search-result-item';
+                resultItem.innerHTML = `
+                    <div class="search-result-name">${result.name}</div>
+                    <div class="search-result-details">
+                        <span>${result.country || ''}</span>
+                        <span>•</span>
+                        <span>${result.admin1 || ''}</span>
+                        <span>•</span>
+                        <span>Lat: ${result.latitude.toFixed(2)}, Lon: ${result.longitude.toFixed(2)}</span>
+                    </div>
+                `;
+                
+                resultItem.addEventListener('click', async () => {
+                    await handleLocationSelection(result);
+                });
+                
+                elements.searchResults.appendChild(resultItem);
+            });
+        }
+        
+        async function handleLocationSelection(location) {
+            userLocation = {
+                latitude: location.latitude,
+                longitude: location.longitude
+            };
+            
+            elements.locationName.textContent = location.name;
+            elements.elevation.textContent = `${Math.round(location.elevation || 0)} m`;
+            elements.timezone.textContent = location.timezone.split('/')[1] || location.timezone;
+            
+            closeSearchOverlay();
+            
+            // Show loading
+            elements.loadingScreen.style.display = 'flex';
+            elements.appContainer.style.display = 'none';
+            updateLoadingText('Loading weather for ' + location.name);
+            
+            try {
+                await loadAllWeatherData();
+                
+                // Update map if it exists
+                if (leafletMap) {
+                    leafletMap.setView([location.latitude, location.longitude], 8);
+                    markersLayer.clearLayers();
+                    await addCurrentLocationMarker();
+                    await addNearbyCities();
+                }
+            } catch (error) {
+                console.error('Location selection error:', error);
+                showError('Failed to load weather for this location.');
+            }
         }
 
         // Initialize the app
@@ -1495,16 +1768,19 @@
                 // Initialize Telegram Web App
                 initTelegramWebApp();
                 
+                // Apply One UI drop effect
+                applyOneUIDropEffect();
+                
                 // Initialize Telegram SDK
                 init();
                 
-                // Initialize search bar
-                initSearchBar();
+                // Initialize search functionality
+                initSearchFunctionality();
                 
                 // Set up switch functionality
                 setupSwitch();
                 
-                // Set up date picker for history
+                // Set up date picker for history (up to 1980)
                 setupHistoryDatePicker();
                 
                 // Get user location using Telegram SDK
@@ -1527,10 +1803,13 @@
             yesterday.setDate(yesterday.getDate() - 1);
             elements.historyDate.max = yesterday.toISOString().split('T')[0];
             
-            // Set default to 7 days ago
-            const sevenDaysAgo = new Date();
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-            elements.historyDate.value = sevenDaysAgo.toISOString().split('T')[0];
+            // Set min to 1980-01-01
+            elements.historyDate.min = '1980-01-01';
+            
+            // Set default to 30 days ago
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            elements.historyDate.value = thirtyDaysAgo.toISOString().split('T')[0];
         }
 
         // ==================== TELEGRAM SDK LOCATION ====================
@@ -1917,13 +2196,6 @@
                     maxZoom: 19
                 }).addTo(leafletMap);
 
-                // Add temperature layer
-                L.tileLayer('https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid={apiKey}', {
-                    maxZoom: 19,
-                    opacity: 0.5,
-                    apiKey: 'YOUR_OPENWEATHER_API_KEY' // You would need to add your own API key
-                }).addTo(leafletMap);
-
                 markersLayer = L.layerGroup().addTo(leafletMap);
                 
                 await addCurrentLocationMarker();
@@ -2172,11 +2444,19 @@
             }
         }
 
-        // ==================== IMPROVED HISTORICAL WEATHER ====================
+        // ==================== HISTORICAL WEATHER (1980-PRESENT) ====================
         async function loadHistoricalWeather() {
             const selectedDate = elements.historyDate.value;
             if (!selectedDate) {
                 showHistoryError('Please select a date');
+                return;
+            }
+            
+            // Validate date is not in future
+            const today = new Date();
+            const selectedDateObj = new Date(selectedDate);
+            if (selectedDateObj > today) {
+                showHistoryError('Cannot select a future date');
                 return;
             }
             
@@ -2185,16 +2465,13 @@
                 <div style="text-align: center; padding: 40px;">
                     <div class="loading-spinner" style="width: 40px; height: 40px; border: 3px solid var(--weather-primary); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
                     <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
-                    <div class="body-medium on-surface">Loading historical data...</div>
+                    <div class="body-medium on-surface">Loading historical data for ${selectedDate}</div>
                 </div>
             `;
             
             try {
-                // Calculate date range for the selected date
-                const startDate = selectedDate;
-                const endDate = selectedDate;
-                
-                const historicalUrl = `https://archive-api.open-meteo.com/v1/archive?latitude=${userLocation.latitude}&longitude=${userLocation.longitude}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode,windspeed_10m_max&timezone=auto`;
+                // Use Open-Meteo historical API
+                const historicalUrl = `https://archive-api.open-meteo.com/v1/archive?latitude=${userLocation.latitude}&longitude=${userLocation.longitude}&start_date=${selectedDate}&end_date=${selectedDate}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode,windspeed_10m_max&timezone=auto`;
                 
                 const response = await fetch(historicalUrl);
                 if (!response.ok) throw new Error('Historical API error');
@@ -2257,15 +2534,25 @@
                                     </div>
                                 </div>
                             </div>
+                            <div style="margin-top: 20px; padding: 12px; background: rgba(var(--weather-primary-rgb, 103, 80, 164), 0.1); border-radius: var(--shape-medium);">
+                                <div style="font-size: 12px; color: var(--weather-primary); text-align: center;">
+                                    <span class="material-symbols-rounded" style="font-size: 14px; vertical-align: middle;">info</span>
+                                    Historical data from Open-Meteo Archive (1980-Present)
+                                </div>
+                            </div>
                         </div>
                     `;
                 } else {
-                    showHistoryError('No historical data available for this date');
+                    showHistoryError('No historical data available for this date. Try a more recent date.');
                 }
                 
             } catch (error) {
                 console.error('Historical data error:', error);
-                showHistoryError('Failed to load historical data. Please try another date.');
+                if (selectedDateObj.getFullYear() < 1980) {
+                    showHistoryError('Data before 1980 may not be available for this location. Try 1980 or later.');
+                } else {
+                    showHistoryError('Failed to load historical data. Please try another date.');
+                }
             }
         }
 
@@ -2291,7 +2578,9 @@
                 ]);
                 
                 // Update Telegram header color with new weather theme
-                updateTelegramHeaderColor();
+                setTimeout(() => {
+                    updateTelegramHeaderColor();
+                }, 100);
                 
                 // Hide loading screen with animation
                 setTimeout(() => {
@@ -2301,6 +2590,10 @@
                         elements.appContainer.style.display = 'flex';
                         setTimeout(() => {
                             elements.appContainer.style.opacity = '1';
+                            // Trigger One UI drop effect
+                            setTimeout(() => {
+                                elements.appWrapper.classList.add('dropped');
+                            }, 100);
                         }, 50);
                     }, 300);
                 }, 500);
@@ -2487,7 +2780,9 @@
             }
             
             // Update Telegram header color when weather changes
-            updateTelegramHeaderColor();
+            setTimeout(() => {
+                updateTelegramHeaderColor();
+            }, 200);
         }
 
         function updateWeatherIcon(weatherCode, isDay) {
@@ -2579,47 +2874,6 @@
                     }
                 });
             });
-        }
-
-        async function handleSearch() {
-            const query = elements.searchInput.value.trim();
-            if (!query) return;
-            
-            updateLoadingText('Searching location...');
-            elements.loadingScreen.style.display = 'flex';
-            elements.appContainer.style.display = 'none';
-            
-            try {
-                const geocodeUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1`;
-                const response = await fetch(geocodeUrl);
-                const data = await response.json();
-                
-                if (data.results && data.results.length > 0) {
-                    const location = data.results[0];
-                    userLocation = {
-                        latitude: location.latitude,
-                        longitude: location.longitude
-                    };
-                    
-                    elements.locationName.textContent = location.name;
-                    elements.elevation.textContent = `${Math.round(location.elevation || 0)} m`;
-                    elements.timezone.textContent = location.timezone.split('/')[1] || location.timezone;
-                    
-                    await loadAllWeatherData();
-                    
-                    if (leafletMap) {
-                        leafletMap.setView([location.latitude, location.longitude], 8);
-                        markersLayer.clearLayers();
-                        await addCurrentLocationMarker();
-                        await addNearbyCities();
-                    }
-                } else {
-                    showError('Location not found');
-                }
-            } catch (error) {
-                console.error('Search error:', error);
-                showError('Search failed. Please try again.');
-            }
         }
 
         function updateLoadingText(text) {
